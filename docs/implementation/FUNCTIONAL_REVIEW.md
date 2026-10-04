@@ -1,5 +1,13 @@
 # Independent functional review — 2026-10-04
 
+## Asha Home follow-up — 0.3.0-preview
+
+An independent source-only follow-up reviewed the simplified Home, onboarding, clock settings entry, settings draft preservation and trusted voice gesture. Two expired-PIN paths were repaired: changing language now retains the requested language and draft behind fresh authorization, and a returned photo selection merges into the pending/live draft without committing family preferences before authorization and Save. The critic reread both repairs and found no remaining critical regression in the reviewed paths.
+
+The clock exposes a labeled accessibility long-click action and requires confirmation before existing PIN checks. Trusted Home voice entry uses a short-lived, one-use token; forged/replayed/restored entry cannot restart recognition. Automatic routing is limited to exact local commands and owned screens. This review did not execute a microphone/provider, build or phone interaction. Separately, root ran build/lint and all 42 instrumentation tests on the Poco; see `../BUILD_STATUS.md` for the artifact and evidence. These results do not prove unrestricted assistant control or production readiness.
+
+## Earlier rebuild review
+
 Scope: current launcher rebuild working tree, with particular attention to MainActivity/Home, caregiver configuration, family communication, alarm state and notification actions. Reviewed PRODUCT_PLAN.md, REBUILD_PROGRESS.md, component contracts and production source independently. No production edits, Gradle invocation, phone actions or live communication were performed by this reviewer. Reproductions below are code-derived scenarios to cover with instrumentation/fakes; they are not claimed device executions. Concurrent writer repairs were reread before recording their disposition.
 
 ## Open defects in implemented behavior

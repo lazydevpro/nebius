@@ -29,6 +29,7 @@ import android.text.Spanned
 import android.text.style.RelativeSizeSpan
 import android.view.Gravity
 import android.view.View
+import android.view.accessibility.AccessibilityNodeInfo
 import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.TextView
@@ -39,6 +40,8 @@ import java.util.Date
 class DeviceStatusView(context: Context) : LinearLayout(context) {
     var onOpenDetails: (() -> Unit)? = null
         set(value) { field = value; isClickable = value != null; refresh() }
+    var onOpenSettings: (() -> Unit)? = null
+        set(value) { field=value;isLongClickable=value!=null }
     private val clock = PlatformUi.text(context, 52f, PlatformUi.GREEN, true)
     private val date = PlatformUi.text(context, 18f, PlatformUi.INK, true)
     private val battery = PlatformUi.text(context, 30f, PlatformUi.INK, true)
@@ -89,6 +92,15 @@ class DeviceStatusView(context: Context) : LinearLayout(context) {
         // The connection graphic and card's spoken summary are sufficient on sparse Home.
         network.visibility = View.GONE
         setOnClickListener { onOpenDetails?.invoke() }
+        setOnLongClickListener { onOpenSettings?.let { it();true } ?: false }
+        isLongClickable=false
+        accessibilityDelegate=object:View.AccessibilityDelegate() {
+            override fun onInitializeAccessibilityNodeInfo(host:View,info:AccessibilityNodeInfo) {
+                super.onInitializeAccessibilityNodeInfo(host,info)
+                if(onOpenSettings!=null) info.addAction(AccessibilityNodeInfo.AccessibilityAction(
+                    AccessibilityNodeInfo.ACTION_LONG_CLICK,AppLanguage.text(context,R.string.home_settings_accessibility)))
+            }
+        }
         refresh()
     }
 

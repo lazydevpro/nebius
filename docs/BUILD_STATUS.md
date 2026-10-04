@@ -1,6 +1,19 @@
 # Build status — 4 October 2026
 
-## Current rebuild preview
+## Current preview — simplified Asha Home
+
+- Version `0.3.0-preview` (code 3), updated on the authorized Poco F1 without clearing app data.
+- Home has no title, language selector, Settings, More or Family help buttons. One compact status card, family shortcuts and four colored tiles remain; the largest CTA is **Ask Asha**, pinned at the bottom.
+- Hold the clock card, confirm **Open settings**, then enter the caregiver PIN if configured. An ordinary clock tap does not open settings. The long-press action has an accessibility label.
+- New installations default to English and Asha, with language/name choices in onboarding. Existing explicit language preferences are preserved. Settings can change the language and assistant name later.
+- A trusted Home voice gesture starts recognition after the existing disclosure/permission flow. Exact local commands can open owned screens; other requests retain transcript review. This is not arbitrary phone automation.
+- `assembleDebug assembleDebugAndroidTest lintDebug` passed: **0 errors, 76 warnings**, without new suppressions or a baseline. **42 Android instrumentation tests passed on the Poco** in 69.129 seconds. New coverage includes onboarding, name normalization, Home layout/clock confirmation and trusted voice-entry rejection of forged/replayed tokens.
+- Current artifact: `dist/maa-debug.apk`; SHA-256 **BD62E2603225BCE8BD5A048F05325BDF28005F115DEB536D99E810612A9EF8EB**. Installed `base.apk` has the same hash. This remains a debug-signed preview.
+- Actual English Home screenshot visually inspected: `verification/poco-asha-home-en.png`. Both language layouts passed automated bounds checks; the automated Hindi image caught a transition and is not accepted visual evidence.
+- Logs: `verification/asha-build.txt`, `verification/instrumentation-asha-poco.txt`. No Maa fatal exception in the inspected crash buffer. Device evidence remains local and git-ignored.
+- Independent source review rechecked clock access, voice entry and locked settings drafts; expired-session language and photo-draft paths were repaired. Physical microphone/provider behavior, full assistant execution, default Home selection, supported WhatsApp guidance and the broader release acceptance checklist remain open. Backend code was unchanged; the prior 35 mocked tests were not rerun for this UI change.
+
+## Previous rebuild preview — 0.2.0
 
 - Version `0.2.0-preview` (code 2), installed on the authorized Poco F1 over its existing Tailscale ADB bridge without clearing data.
 - Compact shared clock/date/battery/connection card; no Home VPN label or explanatory paragraphs. Original colored tiles, one family panel, English/Hindi, Settings and More fit the Poco viewport. Secondary tools are under More.

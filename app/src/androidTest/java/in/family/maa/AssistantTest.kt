@@ -23,6 +23,48 @@ class AssistantTest {
     @Before fun english() { language = prefs.getString(AppLanguage.KEY, null); prefs.edit().putString(AppLanguage.KEY, "en").commit() }
     @After fun restore() { prefs.edit().putString(AppLanguage.KEY, language).commit() }
 
+    @Test fun identityIsBoundedSingleLineAndLocalizedWithoutChangingTheAppBrand() {
+        assertEquals("Asha", AssistantIdentity.normalizeName(" \n\u0000\t"))
+        assertEquals("Asha Devi", AssistantIdentity.normalizeName("  Asha\n  Devi  "))
+        assertEquals("आशा", AssistantIdentity.normalizeName("आशा"))
+        assertEquals("ASha", AssistantIdentity.normalizeName("A\u202eSha"))
+        val unicode = AssistantIdentity.normalizeName("🙂".repeat(40))
+        assertEquals(24, unicode.codePointCount(0, unicode.length))
+        val previous = prefs.getString(AssistantIdentity.KEY_NAME, null)
+        try {
+            prefs.edit().putString(AssistantIdentity.KEY_NAME, "Anya").putString(AppLanguage.KEY, "en").commit()
+            assertEquals("Anya", AssistantIdentity.displayName(context))
+            assertEquals("Ask Anya", AssistantIdentity.askLabel(context))
+            prefs.edit().putString(AssistantIdentity.KEY_NAME, "आशा").putString(AppLanguage.KEY, "hi").commit()
+            assertEquals("आशा से पूछें", AssistantIdentity.askLabel(context))
+        } finally {
+            prefs.edit().putString(AssistantIdentity.KEY_NAME, previous).putString(AppLanguage.KEY, "en").commit()
+        }
+    }
+
+    @Test fun explicitVoiceAuthorizationIsOneUseAndNeverRestoredOrForged() {
+        val authorized = AssistantActivity.voiceIntent(context)
+        val replay = Intent(authorized)
+        val first = AssistantActivity.VoiceEntry(authorized, restored = false)
+        assertTrue(first.consume())
+        assertTrue(first.navigateLocalAfterSpeech)
+        assertFalse(first.consume())
+        assertFalse(AssistantActivity.VoiceEntry(replay, restored = false).consume())
+        val forged = Intent(context, AssistantActivity::class.java).putExtra("auto_listen", true)
+            .putExtra("in.family.maa.TRUSTED_VOICE_ENTRY", "forged-token")
+        assertFalse(AssistantActivity.VoiceEntry(forged, restored = false).consume())
+        val restored = AssistantActivity.voiceIntent(context)
+        val restoredReplay = Intent(restored)
+        assertFalse(AssistantActivity.VoiceEntry(restored, restored = true).consume())
+        assertFalse(AssistantActivity.VoiceEntry(restoredReplay, restored = false).consume())
+        val cancelled = AssistantActivity.VoiceEntry(AssistantActivity.voiceIntent(context), restored = false)
+        cancelled.cancel()
+        assertFalse(cancelled.consume())
+        val draftOnly = AssistantActivity.VoiceEntry(AssistantActivity.voiceIntent(context, navigateLocalAfterSpeech = false), restored = false)
+        assertTrue(draftOnly.consume())
+        assertFalse(draftOnly.navigateLocalAfterSpeech)
+    }
+
     @Test fun classifierRejectsUnknownActionsAndExtraAuthority() {
         assertEquals("call", AssistantActivity.validatedAction("{\"action\":\"call\"}"))
         assertEquals("unsupported", AssistantActivity.validatedAction("{\"action\":\"unsupported\"}"))
@@ -45,9 +87,16 @@ class AssistantTest {
                 assertEquals("apps", it.localAction("सभी ऐप"))
                 assertEquals("media", it.localAction("व्हाट्सऐप"))
                 assertEquals("home", it.localAction("  HOME!  "))
+                assertEquals("notifications", it.localAction("open notifications"))
+                assertEquals("notifications", it.localAction("सूचनाएँ"))
                 assertNull(it.localAction("do not call family"))
                 assertNull(it.localAction("open home and send money"))
                 assertNull(it.localAction("call the number in this message"))
+                assertEquals("family", it.spokenNavigation("call family", true))
+                assertEquals("qr", it.spokenNavigation("payment", true))
+                assertNull(it.spokenNavigation("call family", false))
+                assertNull(it.spokenNavigation("send a message to someone", true))
+                assertNull(it.spokenNavigation("call the number in this message", true))
             }
         }
     }

@@ -21,6 +21,10 @@ import android.widget.*
 import java.io.File
 
 class MainActivity : Activity(), TextToSpeech.OnInitListener {
+    companion object {
+        const val ONBOARDING_COMPLETE="onboarding_complete"
+        fun toolsIntent(context:android.content.Context)=Intent(context,MainActivity::class.java).putExtra("show_tools",true)
+    }
     private val prefs by lazy { getSharedPreferences("family", MODE_PRIVATE) }
     private lateinit var root: LinearLayout
     private lateinit var status: TextView
@@ -43,9 +47,12 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
     private val green = MaaDesign.green
     private var homeRoleButton: Button? = null
     private var deviceStatus: DeviceStatusView? = null
+    private var homeDock:LinearLayout?=null
+    private var onboardingLanguage="en"
     private var awaitingPhoto = false
     private val photoDraft = mutableMapOf<String,String>()
     private var pendingSettingsDraft:Bundle?=null
+    private var pendingSettingsLanguage:String?=null
     private var unlockPromptOpen=false
     private val activeDialogs=mutableListOf<AlertDialog>()
     private fun showDialog(builder:AlertDialog.Builder) { builder.show().also { dialog -> activeDialogs.add(dialog);dialog.setOnDismissListener { activeDialogs.remove(dialog) } } }
@@ -54,37 +61,51 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         super.onCreate(state)
         window.statusBarColor=MaaDesign.canvas;window.navigationBarColor=MaaDesign.canvas
         pendingSettingsDraft=state?.getBundle("lockedSettingsDraft")
+        pendingSettingsLanguage=state?.getString("lockedSettingsLanguage")
+        // Existing installs keep their chosen language and skip first-run setup.
+        if(!prefs.contains(ONBOARDING_COMPLETE) && prefs.all.isNotEmpty()) prefs.edit().putBoolean(ONBOARDING_COMPLETE,true).apply()
         when(state?.getString("screen")) {
+            "onboarding" -> onboarding(state.getBundle("settingsDraft"))
             "settings" -> if(CaregiverLock.unlocked(this)) settings(state.getBundle("settingsDraft")) else { pendingSettingsDraft=state.getBundle("settingsDraft");home(false) }
             "contacts" -> contacts()
             "help" -> help()
             "tools" -> tools()
             "qr" -> showQr(state.getString("qrAmount"))
-            else -> home(pendingSettingsDraft==null)
+            else -> if(!prefs.getBoolean(ONBOARDING_COMPLETE,false)) onboarding()
+                else if(intent.getBooleanExtra("show_tools",false)) tools() else home(pendingSettingsDraft==null)
         }
         tts = TextToSpeech(this,this)
     }
     override fun onSaveInstanceState(state: Bundle) {
         state.putString("screen",screen)
-        if(screen=="settings") state.putBundle("settingsDraft",settingsDraft())
+        if(screen=="settings" || screen=="onboarding") state.putBundle("settingsDraft",settingsDraft())
         pendingSettingsDraft?.let { state.putBundle("lockedSettingsDraft",it) }
+        pendingSettingsLanguage?.let { state.putString("lockedSettingsLanguage",it) }
         if(screen=="qr") state.putString("qrAmount",qrAmount?.text?.toString())
         super.onSaveInstanceState(state)
     }
-    override fun onNewIntent(intent: Intent) { super.onNewIntent(intent); setIntent(intent); home() }
+    override fun onNewIntent(intent: Intent) { super.onNewIntent(intent); setIntent(intent); if(intent.getBooleanExtra("show_tools",false)) tools() else home() }
     override fun onResume() {
         super.onResume()
         if(screen=="settings" && !CaregiverLock.unlocked(this) && !awaitingPhoto) {
             pendingSettingsDraft=settingsDraft();home(false)
         }
-        if(pendingSettingsDraft!=null && !unlockPromptOpen) {
-            unlockPromptOpen=true
-            CaregiverLock.request(this,onCancelled={pendingSettingsDraft=null;unlockPromptOpen=false}) {
-                val preserved=pendingSettingsDraft;pendingSettingsDraft=null;unlockPromptOpen=false;settings(preserved)
-            }
-        }
+        resumeSettingsUnlock()
         deviceStatus?.refresh()
         homeRoleButton?.apply { text=tr(if(HomeRoleController.isDefaultHome(this@MainActivity)) R.string.home_default_ready else R.string.home_make_default) }
+    }
+    private fun resumeSettingsUnlock() {
+        if(pendingSettingsDraft!=null && !unlockPromptOpen) {
+            unlockPromptOpen=true
+            CaregiverLock.request(this,onCancelled={pendingSettingsDraft=null;pendingSettingsLanguage=null;unlockPromptOpen=false}) {
+                val preserved=pendingSettingsDraft
+                pendingSettingsLanguage?.let { prefs.edit().putString(AppLanguage.KEY,it).apply();languageContext=AppLanguage.localizedContext(this);configureVoice() }
+                pendingSettingsDraft=null;pendingSettingsLanguage=null;unlockPromptOpen=false;settings(preserved)
+            }
+        }
+    }
+    private fun reauthorizeSettings(draft:Bundle,language:String?=null) {
+        pendingSettingsDraft=draft;pendingSettingsLanguage=language;home(false);resumeSettingsUnlock()
     }
     override fun onInit(code: Int) {
         if(code == TextToSpeech.SUCCESS) {
@@ -105,8 +126,10 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         val destination=screen
         val draft=if(screen=="settings") settingsDraft() else null
         val amount=qrAmount?.text?.toString()
+        val nextLanguage=if(AppLanguage.code(this)=="hi") "en" else "hi"
+        if(screen=="settings" && !CaregiverLock.unlocked(this)) { reauthorizeSettings(draft!!,nextLanguage);return }
         cancelPendingVoice()
-        prefs.edit().putString(AppLanguage.KEY,if(AppLanguage.code(this)=="hi") "en" else "hi").apply()
+        prefs.edit().putString(AppLanguage.KEY,nextLanguage).apply()
         languageContext=AppLanguage.localizedContext(this)
         configureVoice()
         when(destination) {
@@ -125,12 +148,18 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
     }
     private fun surface(title: String, destination: String) {
         dismissDialogs()
-        cancelPendingVoice(); screen=destination; qrAmount=null; homeRoleButton=null; deviceStatus=null
+        cancelPendingVoice(); screen=destination; qrAmount=null; homeRoleButton=null; deviceStatus=null;homeDock=null
         settingsFields.clear(); quietSwitch=null; guardSwitch=null
-        root=LinearLayout(this).apply { orientation=LinearLayout.VERTICAL; setPadding(dp(16),dp(12),dp(16),dp(24)); setBackgroundColor(MaaDesign.canvas) }
+        root=LinearLayout(this).apply { orientation=LinearLayout.VERTICAL; setPadding(dp(16),dp(12),dp(16),dp(if(destination=="home") 8 else 24)); setBackgroundColor(MaaDesign.canvas) }
         val scroll=ScrollView(this).apply { isFillViewport=true; addView(root) }
         val frame=FrameLayout(this).apply {
-            addView(scroll,FrameLayout.LayoutParams(-1,-1))
+            if(destination=="home") {
+                val column=LinearLayout(this@MainActivity).apply { orientation=LinearLayout.VERTICAL;setBackgroundColor(MaaDesign.canvas) }
+                column.addView(scroll,LinearLayout.LayoutParams(-1,0,1f))
+                homeDock=LinearLayout(this@MainActivity).apply { orientation=LinearLayout.VERTICAL;setPadding(dp(16),dp(8),dp(16),dp(16)) }
+                column.addView(homeDock,LinearLayout.LayoutParams(-1,-2))
+                addView(column,FrameLayout.LayoutParams(-1,-1))
+            } else addView(scroll,FrameLayout.LayoutParams(-1,-1))
             setOnApplyWindowInsetsListener { view,insets ->
                 if(android.os.Build.VERSION.SDK_INT>=30) {
                     val safe=insets.getInsets(android.view.WindowInsets.Type.systemBars() or android.view.WindowInsets.Type.displayCutout() or android.view.WindowInsets.Type.ime())
@@ -149,10 +178,10 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             @Suppress("DEPRECATION")
             window.decorView.systemUiVisibility=android.view.View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR or android.view.View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR
         }
-        root.addView(LinearLayout(this).apply {
+        if(destination!="home") root.addView(LinearLayout(this).apply {
             orientation=LinearLayout.HORIZONTAL; gravity=Gravity.CENTER_VERTICAL; setPadding(0,0,0,dp(8))
             addView(TextView(this@MainActivity).apply { text=title; textSize=29f; setTypeface(typeface,Typeface.BOLD); setTextColor(MaaDesign.ink); gravity=Gravity.START; layoutParams=LinearLayout.LayoutParams(0,-2,1f) })
-            addView(Button(this@MainActivity).apply {
+            if(destination=="settings") addView(Button(this@MainActivity).apply {
                 id=R.id.language_switch; text=tr(R.string.switch_language); contentDescription=tr(R.string.switch_language_description)
                 isAllCaps=false; textSize=18f; minHeight=dp(48); setTextColor(green)
                 background=MaaDesign.shape(this@MainActivity,MaaDesign.pale,24)
@@ -170,12 +199,13 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         })
     }
     private fun home(clearPendingDraft:Boolean=true) {
-        if(clearPendingDraft) pendingSettingsDraft=null
+        if(clearPendingDraft) { pendingSettingsDraft=null;pendingSettingsLanguage=null }
         unlockPromptOpen=false
         surface(tr(R.string.home_title),"home")
         photoDraft.clear()
         deviceStatus=DeviceStatusView(this).apply {
-            onOpenDetails={ launch(Intent(this@MainActivity,StatusDetailsActivity::class.java)) }
+            onOpenDetails=null
+            onOpenSettings={ openSettings() }
             layoutParams=LinearLayout.LayoutParams(-1,-2).apply { bottomMargin=dp(10) }
         }; root.addView(deviceStatus)
         val faces=LinearLayout(this).apply {
@@ -190,8 +220,8 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
                 orientation=LinearLayout.VERTICAL;gravity=Gravity.CENTER;minimumHeight=dp(96);isFocusable=true;isClickable=true
                 layoutParams=if(faces.orientation==LinearLayout.HORIZONTAL) LinearLayout.LayoutParams(0,-2,1f).apply { setMargins(dp(3),0,dp(3),0) } else LinearLayout.LayoutParams(-1,-2).apply { bottomMargin=dp(8) }
                 setPadding(dp(4),dp(8),dp(4),dp(8));background=MaaDesign.shape(this@MainActivity,Color.TRANSPARENT,24)
-                contentDescription=if(number.isBlank()) tr(R.string.home_add_family) else name
-                setOnClickListener { if(number.isBlank()) openSettings() else launch(CommunicationActivity.intent(this@MainActivity,i)) }
+                contentDescription=if(number.isBlank()) tr(R.string.home_empty_family) else name
+                setOnClickListener { if(number.isBlank()) Toast.makeText(this@MainActivity,tr(R.string.home_settings_gesture),Toast.LENGTH_LONG).show() else launch(CommunicationActivity.intent(this@MainActivity,i)) }
             }
             val image=ImageView(this).apply {
                 layoutParams=LinearLayout.LayoutParams(dp(56),dp(56));scaleType=ImageView.ScaleType.CENTER_CROP;importantForAccessibility=View.IMPORTANT_FOR_ACCESSIBILITY_NO
@@ -205,11 +235,6 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             faces.addView(card)
         }
         root.addView(faces)
-        root.addView(MaaDesign.action(this,tr(R.string.home_voice),true) { launch(Intent(this,AssistantActivity::class.java)) }.apply {
-            id=R.id.home_voice_action;textSize=24f;minHeight=dp(68);setCompoundDrawablesWithIntrinsicBounds(MaaIcon(this@MainActivity,"mic",Color.WHITE),null,null,null)
-            background=MaaDesign.shape(this@MainActivity,Color.rgb(15,119,113),24)
-            layoutParams=LinearLayout.LayoutParams(-1,-2).apply { bottomMargin=dp(8) }
-        })
         data class Tile(val label:Int,val symbol:String,val color:Int,val id:Int,val action:()->Unit)
         val entries=listOf(
             Tile(R.string.home_phone,"phone",0xffe5f3e9.toInt(),R.id.home_phone_action) { launch(CommunicationActivity.intent(this)) },
@@ -225,28 +250,32 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
                 layoutParams=LinearLayout.LayoutParams(0,-2,1f).apply { setMargins(dp(4),0,dp(4),dp(10)) }
             }) };root.addView(row)
         }
-        root.addView(MaaDesign.action(this,tr(R.string.home_help)) { help() }.apply {
-            id=R.id.home_help_action;background=MaaDesign.shape(this@MainActivity,0xffb94c36.toInt(),22);setTextColor(Color.WHITE);textSize=24f
-            setCompoundDrawablesWithIntrinsicBounds(MaaIcon(this@MainActivity,"help",Color.WHITE),null,null,null)
-            layoutParams=LinearLayout.LayoutParams(-1,-2).apply { topMargin=dp(4);bottomMargin=dp(8) }
+        homeDock?.addView(MaaDesign.action(this,AssistantIdentity.askLabel(this),true) { launch(AssistantActivity.voiceIntent(this)) }.apply {
+            id=R.id.home_voice_action;textSize=34f;minHeight=dp(144);minimumHeight=dp(144)
+            setTypeface(typeface,Typeface.BOLD);maxLines=2;ellipsize=android.text.TextUtils.TruncateAt.END
+            setAutoSizeTextTypeUniformWithConfiguration(24,34,1,android.util.TypedValue.COMPLEX_UNIT_SP)
+            contentDescription=AssistantIdentity.askLabel(this@MainActivity)
+            setPadding(dp(24),dp(24),dp(24),dp(24));compoundDrawablePadding=dp(18)
+            val mic=MaaIcon(this@MainActivity,"mic",Color.WHITE).apply { setBounds(0,0,dp(56),dp(56)) }
+            setCompoundDrawables(mic,null,null,null)
+            background=MaaDesign.shape(this@MainActivity,Color.rgb(15,119,113),28)
+            layoutParams=LinearLayout.LayoutParams(-1,-2)
         })
-        val footer=LinearLayout(this).apply { orientation=LinearLayout.HORIZONTAL }
-        listOf(R.string.home_settings to { openSettings() },R.string.home_more to { tools() }).forEach { (label,action) ->
-            footer.addView(MaaDesign.action(this,tr(label),false,action).apply {
-                minHeight=dp(48);minimumHeight=dp(48);textSize=18f
-                id=if(label==R.string.home_settings) R.id.home_settings_action else R.id.home_more_action
-                layoutParams=LinearLayout.LayoutParams(0,-2,1f).apply { setMargins(dp(4),0,dp(4),0) }
-            })
-        }
-        root.addView(footer)
     }
     private fun tools() {
-        surface(tr(R.string.home_more),"tools")
+        surface(tr(R.string.home_tools),"tools")
         val utilities=listOf(R.string.home_alarm to { launch(Intent(this,AlarmActivity::class.java)) },R.string.home_notifications to { launch(Intent(this,NotificationCenterActivity::class.java)) },R.string.home_qr to { capture() })
         utilities.forEach { (label,action) -> root.addView(MaaDesign.action(this,tr(label),false,action).apply { layoutParams=LinearLayout.LayoutParams(-1,-2).apply { bottomMargin=dp(8) } }) }
+        button(tr(R.string.home_help)) { help() }
         button(tr(R.string.home_button)) { home() }
     }
-    private fun openSettings() { cancelPendingVoice(); CaregiverLock.request(this) { settings() } }
+    private fun openSettings() {
+        cancelPendingVoice()
+        showDialog(AlertDialog.Builder(this).setTitle(tr(R.string.home_confirm_settings))
+            .setNegativeButton(tr(R.string.cancel),null).setPositiveButton(tr(R.string.open)) { _,_->
+                if(CaregiverLock.configured(this)) CaregiverLock.request(this) { settings() } else settings()
+            })
+    }
     private fun contacts() {
         surface(tr(R.string.family),"contacts")
         for(i in 1..3) {
@@ -304,9 +333,9 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         if(requestCode in 51..53) {
             awaitingPhoto=false
             val uri=data?.data ?: return
-            if(!CaregiverLock.unlocked(this)) { home();return }
             try { contentResolver.takePersistableUriPermission(uri,Intent.FLAG_GRANT_READ_URI_PERMISSION) } catch(_:Exception) {}
-            val draft=settingsDraft().apply { putString("photo${requestCode-50}",uri.toString()) }
+            val draft=Bundle(pendingSettingsDraft ?: settingsDraft()).apply { putString("photo${requestCode-50}",uri.toString()) }
+            if(!CaregiverLock.unlocked(this)) { reauthorizeSettings(draft);return }
             settings(draft);speak(tr(R.string.home_photo_pending));return
         }
         if(requestCode==40) {
@@ -355,8 +384,34 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             button(tr(R.string.retake)) { capture() }; button(tr(R.string.home_button)) { home() }
             if(savedAmount==null) speak(tr(R.string.amount_prompt))
     }
+    private fun onboarding(draft:Bundle?=null) {
+        surface(tr(R.string.home_welcome),"onboarding")
+        onboardingLanguage=draft?.getString("setup_language") ?: AppLanguage.code(this)
+        root.addView(TextView(this).apply { text=tr(R.string.home_language);textSize=22f;setTextColor(MaaDesign.ink) })
+        val languages=RadioGroup(this).apply { orientation=RadioGroup.VERTICAL }
+        listOf("en" to "English","hi" to "हिन्दी").forEach { (code,label) ->
+            languages.addView(RadioButton(this).apply {
+                id=if(code=="en") R.id.setup_english else R.id.setup_hindi
+                text=label;textSize=24f;minimumHeight=dp(64);isChecked=onboardingLanguage==code
+                setOnCheckedChangeListener { _,checked -> if(checked) onboardingLanguage=code }
+            })
+        };root.addView(languages)
+        root.addView(TextView(this).apply { text=tr(R.string.home_assistant_name);textSize=22f;setTextColor(MaaDesign.ink);setPadding(0,dp(16),0,0) })
+        val name=EditText(this).apply {
+            id=R.id.assistant_name;setText(draft?.getString(AssistantIdentity.KEY_NAME) ?: AssistantIdentity.displayName(this@MainActivity))
+            textSize=24f;setSingleLine(true);filters=arrayOf(android.text.InputFilter.LengthFilter(AssistantIdentity.MAX_CODE_POINTS))
+        };settingsFields[AssistantIdentity.KEY_NAME]=name;root.addView(name)
+        root.addView(TextView(this).apply { text=tr(R.string.home_settings_gesture);textSize=18f;setTextColor(MaaDesign.muted);setPadding(0,dp(16),0,dp(16)) })
+        root.addView(MaaDesign.action(this,tr(R.string.home_start),true) {
+            prefs.edit().putString(AppLanguage.KEY,onboardingLanguage)
+                .putString(AssistantIdentity.KEY_NAME,AssistantIdentity.normalizeName(name.text.toString()))
+                .putBoolean(ONBOARDING_COMPLETE,true).apply()
+            languageContext=AppLanguage.localizedContext(this);configureVoice();home()
+        }.apply { id=R.id.setup_start })
+    }
     private fun settingsDraft() = Bundle().apply {
         settingsFields.forEach { (key,input) -> putString(key,input.text.toString()) }
+        putString("setup_language",onboardingLanguage)
         photoDraft.forEach { (key,value) -> putString(key,value) }
         putBoolean("quiet",quietSwitch?.isChecked ?: prefs.getBoolean("quiet",false))
         putBoolean("guard",guardSwitch?.isChecked ?: prefs.getBoolean("guard",false))
@@ -368,6 +423,8 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         homeRoleButton=MaaDesign.action(this,tr(if(HomeRoleController.isDefaultHome(this)) R.string.home_default_ready else R.string.home_make_default)) { HomeRoleController.request(this) }.apply {
             minHeight=dp(72);layoutParams=LinearLayout.LayoutParams(-1,-2).apply { bottomMargin=dp(12) }
         };root.addView(homeRoleButton)
+        button(tr(R.string.home_tools)) { tools() }
+        button(tr(R.string.home_device_details)) { launch(Intent(this,StatusDetailsActivity::class.java)) }
         button(tr(R.string.home_set_pin)) { CaregiverLock.configure(this) { settings(settingsDraft()) } }
         if(CaregiverLock.configured(this)) button(tr(R.string.home_pin_remove)) { CaregiverLock.remove(this) { settings(settingsDraft()) } }
         button(tr(R.string.home_look_feel)) {
@@ -381,9 +438,12 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         fun field(key: String,label: String,number: Boolean=false) {
             root.addView(TextView(this).apply { text=label; textSize=18f })
             val input=EditText(this).apply { setText(draft?.getString(key) ?: prefs.getString(key,"")); textSize=20f; if(number) inputType=android.text.InputType.TYPE_CLASS_PHONE; if(key=="token") inputType=android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD }
-            when(key) { "name1" -> input.id=R.id.family_name_1; "phone1" -> input.id=R.id.family_phone_1; "backend" -> input.id=R.id.backend_url }
+            when(key) { "name1" -> input.id=R.id.family_name_1; "phone1" -> input.id=R.id.family_phone_1; "backend" -> input.id=R.id.backend_url
+                AssistantIdentity.KEY_NAME -> { input.id=R.id.assistant_name;input.setSingleLine(true);input.filters=arrayOf(android.text.InputFilter.LengthFilter(AssistantIdentity.MAX_CODE_POINTS));input.setText(draft?.getString(key) ?: AssistantIdentity.displayName(this)) }
+            }
             fields[key]=input; root.addView(input)
         }
+        field(AssistantIdentity.KEY_NAME,tr(R.string.home_assistant_name))
         for(i in 1..3) {
             field("name$i",tr(R.string.person_name,i)); field("phone$i",tr(R.string.phone_label),true)
             button(tr(R.string.person_photo,i)) {
@@ -413,11 +473,11 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         }
         button(tr(R.string.overlay_disable)) { HelpOverlayService.stop(this); speak(tr(R.string.overlay_disabled)) }
         button(tr(R.string.save)) {
-            if(!CaregiverLock.unlocked(this)) { home();return@button }
+            if(!CaregiverLock.unlocked(this)) { reauthorizeSettings(settingsDraft());return@button }
             val url=fields["backend"]!!.text.toString().trim()
             val backendUri=Uri.parse(url)
             if(url.isNotEmpty() && (backendUri.scheme!="https" || backendUri.host.isNullOrBlank() || backendUri.userInfo!=null || backendUri.query!=null || backendUri.fragment!=null)) { speak(tr(R.string.invalid_backend)); return@button }
-            prefs.edit().apply { fields.forEach { (key,input)->putString(key,input.text.toString().trim()) };photoDraft.forEach { (key,value)->putString(key,value) }; putBoolean("quiet",quiet.isChecked); putBoolean("guard",guard.isChecked) }.apply(); home(); speak(tr(R.string.settings_saved))
+            prefs.edit().apply { fields.forEach { (key,input)->putString(key,if(key==AssistantIdentity.KEY_NAME) AssistantIdentity.normalizeName(input.text.toString()) else input.text.toString().trim()) };photoDraft.forEach { (key,value)->putString(key,value) }; putBoolean("quiet",quiet.isChecked); putBoolean("guard",guard.isChecked) }.apply(); home(); speak(tr(R.string.settings_saved))
         }
         button(tr(R.string.home_button)) { home() }
     }

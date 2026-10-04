@@ -2,7 +2,9 @@
 
 ## Rebuild disposition
 
-**Still not production ready.** `0.2.0-preview` has passed 38 Poco instrumentation tests, 35 mocked backend tests and build/lint (0 errors, 71 warnings). It remains debug-signed. `BUILD_STATUS.md` binds these results to the installed APK hash.
+**Still not production ready.** `0.3.0-preview` has passed 42 Poco instrumentation tests and build/lint (0 errors, 76 warnings). The unchanged backend previously passed 35 mocked tests. It remains debug-signed. `BUILD_STATUS.md` binds the current Android results to the installed APK hash.
+
+The latest UI removes Home title/language/footer controls, makes Ask Asha the largest bottom CTA, defaults new setup to English/Asha, and protects settings entry with clock long-press confirmation plus the configured PIN. Independent source recheck closed expired-session language/photo-draft issues. Trusted voice entry and exact local command navigation do not constitute arbitrary phone automation; physical voice/provider acceptance remains open.
 
 The payment-amount substring parser has been replaced with whole-expression validation and rejection tests. The gateway now has bounded inbound deadlines, connection/inference concurrency, rate/quota limits, per-device credentials and bounded upstream responses; production hosting/provisioning/spend controls remain open. Home/contact thumbnails decode off the UI thread at bounded size, and camera-result copy exceptions are handled. The camera replacement still needs storage-failure/atomicity acceptance.
 

@@ -4,7 +4,7 @@ An Android launcher for someone who recognises family faces and uses speed dial,
 but cannot comfortably read smartphone menus. Package: `in.family.maa`.
 Android 8+; physical target: Poco F1.
 
-The current app is version **0.2.0-preview** and is not production ready. The researched
+The current app is version **0.3.0-preview** and is not production ready. The researched
 [rebuild plan](docs/PRODUCT_PLAN.md) covers complete BIG-suite parity, dependable
 Home behavior, an original accessible interface and bounded guided-app assistance.
 See the [feature inventory](docs/research/BIG_LAUNCHER_PARITY.md) and
@@ -12,8 +12,11 @@ See the [feature inventory](docs/research/BIG_LAUNCHER_PARITY.md) and
 
 The rebuild adds the selected compact Home design, live device status, caregiver
 PIN, app search/favorites/hiding, family message drafts, alarms, opt-in notification
-history and an explicit assistant with a floating navigation helper. Alarms,
-notifications and Shop QR are under **More**. These features do not establish full
+history and an explicit assistant with a floating navigation helper. Home has no
+brand header, language selector, Help, Settings or More buttons. Its largest bottom
+action is **Ask Asha**, with a customizable name. Hold the clock card and confirm
+**Open settings** to access configuration; a configured caregiver PIN remains required.
+Secondary tools stay in Settings → Tools and supported assistant routes. These features do not establish full
 BIG-suite parity or reliable control inside WhatsApp. Original design concepts
 are in `output/ui-mockups`; actual device evidence stays local in `docs/verification`.
 
@@ -43,11 +46,14 @@ Keep ADB on the existing private Tailscale network. No port forwarding.
 
 ## Configure once as a family member
 
-Open Settings; add up to three names, numbers and photos. Contacts use the
+Hold the clock, confirm Open, then enter the caregiver PIN if configured. Add up
+to three names, numbers and photos in Settings. Contacts use the
 system dialler, preserving its final call control. Choose Maa as the default Home
 app in Android settings if desired. All family buttons still work without the AI
-backend. Tap **English** or **हिन्दी** at the top of Home to switch
-languages. Hindi is the default; the choice is saved across app restarts. The
+backend. New installs offer English/Hindi and assistant-name choices during
+onboarding, with **English** and **Asha** selected by default. Language can later be
+changed inside Settings, and the assistant name is saved with the other fields.
+Existing explicit language choices are preserved. The
 interface, spoken prompts, shared request text and floating help button use the
 selected language. Contact names and other text you enter stay as written.
 Switching preserves unfinished settings and the entered QR amount. This changes
@@ -91,7 +97,12 @@ autonomous accessibility actions are implemented.
 ## Voice and live Nemotron
 
 Hindi and English commands route locally to family, messages, apps, alarms or Home.
-Speech begins on an explicit tap and the transcript is reviewed before submission.
+The Home Ask button explicitly starts voice input after any first-use provider
+notice and microphone permission. Its exact local navigation commands can open
+owned screens after recognition. Unknown/cloud requests remain editable and require
+submission; final call/message/payment decisions remain separately reviewed.
+Plain assistant/overlay speech retains transcript review. Forged intent extras,
+replay, cancellation and activity recreation cannot restart listening.
 Cloud classification requires separate opt-in for the configured HTTPS endpoint.
 
 The backend uses standard-library Python. Set `NEBIUS_API_KEY`,

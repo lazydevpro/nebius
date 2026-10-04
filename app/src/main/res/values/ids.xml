@@ -1,5 +1,9 @@
 <resources>
     <item name="language_switch" type="id" />
+    <item name="assistant_name" type="id" />
+    <item name="setup_english" type="id" />
+    <item name="setup_hindi" type="id" />
+    <item name="setup_start" type="id" />
     <item name="family_name_1" type="id" />
     <item name="family_phone_1" type="id" />
     <item name="backend_url" type="id" />

@@ -42,7 +42,7 @@ class HelpOverlayService : Service() {
     private var requestGeneration = -1L
     private var panelGeneration = -1L
     private val languageListener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
-        if (key == AppLanguage.KEY) handler.post { if (!stopping) { updateNotification(); render() } }
+        if (key == AppLanguage.KEY || key == AssistantIdentity.KEY_NAME) handler.post { if (!stopping) { updateNotification(); render() } }
     }
     private val permissionCheck = object : Runnable {
         override fun run() {
@@ -51,7 +51,13 @@ class HelpOverlayService : Service() {
             handler.postDelayed(this, 1500)
         }
     }
-    private fun tr(id: Int): String = AppLanguage.text(this, id)
+    private fun tr(id: Int): String = when (id) {
+        R.string.assistant_title -> AssistantIdentity.displayName(this)
+        R.string.assistant_ask -> AssistantIdentity.askLabel(this)
+        R.string.assistant_overlay_channel, R.string.assistant_overlay_bubble, R.string.assistant_overlay_expand ->
+            AppLanguage.localizedContext(this).getString(id, AssistantIdentity.displayName(this))
+        else -> AppLanguage.text(this, id)
+    }
     private fun dp(value: Int): Int = MaaDesign.dp(this, value)
     override fun onBind(intent: Intent?): IBinder? = null
     override fun onCreate() {
@@ -115,7 +121,7 @@ class HelpOverlayService : Service() {
         }
         makeMovable(handle)
         if (expanded) {
-            button(R.string.assistant_ask, true) { open(Intent(this, AssistantActivity::class.java)) }
+            button(R.string.assistant_ask, true) { open(AssistantActivity.voiceIntent(this, navigateLocalAfterSpeech = false)) }
             button(R.string.assistant_family) { open(CommunicationActivity.intent(this)) }
             button(R.string.assistant_home) { open(Intent(this, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)) }
             button(R.string.assistant_overlay_collapse) { expanded = false; render() }

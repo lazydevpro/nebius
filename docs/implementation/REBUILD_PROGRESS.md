@@ -4,6 +4,12 @@ Baseline: local Git commit `70e7771`. Existing bilingual APK/evidence preserved.
 
 ## Current contracts and ownership
 
+Current UI checkpoint is `0.3.0-preview`; the `0.2.0` checkpoint below is historical. Home now removes its title, language switch and Settings/More/Family help controls. The bottom Ask Asha button is the largest target. New setup defaults to English and Asha, with editable language/name; existing explicit language choices survive updates. Hold the clock, confirm Open settings, then unlock the caregiver PIN if configured. Settings contains the remaining tools.
+
+The [official BIG Launcher manual](https://biglauncher.com/manual/en/) documents Preferences next to the clock, menu protection, and a long-press emergency shortcut. Our clock-hold confirmation follows the user's requested simplification; it is not claimed to be BIG Launcher's exact default gesture.
+
+Build/lint passed with 0 errors and 76 warnings; 42 Poco instrumentation tests passed. The installed APK hash matches the artifact in `../BUILD_STATUS.md`. The settled English screenshot was inspected. An independent source critic rechecked locked language/photo drafts and trusted voice entry after repairs. Real voice/provider behavior and wider parity remain unverified.
+
 - Root: MainActivity, original shared visual primitives, Home integration, caregiver setup protection, existing floating assistant/guard, request safety and integration tests.
 - Platform writer: new status/Home-role/app-catalog/detail components and platform resources; resolves version-specific APIs before code.
 - Communication writer: new family/recipient/composition/native-contact components and communication resources; no incomplete default Phone/SMS role registration.

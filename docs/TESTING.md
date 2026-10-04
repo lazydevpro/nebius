@@ -1,15 +1,15 @@
 # Device acceptance checklist
 
-2026-10-04 rebuild result: **38/38 Android instrumentation tests passed on the Poco F1**, plus **35 mocked local backend tests**. Build/lint passed (0 errors, 71 warnings). See `BUILD_STATUS.md` for the exact installed artifact and evidence. Prior counts below describe the older prototype. Passing automated tests does not complete the physical checklist.
+2026-10-04 current `0.3.0-preview` result: **42/42 Android instrumentation tests passed on the Poco F1**. Build/lint passed (0 errors, 76 warnings). The unchanged backend previously passed **35 mocked local tests**. See `BUILD_STATUS.md` for the exact installed artifact and evidence. Passing automated tests does not complete the physical checklist.
 
-New regression coverage includes viewport fit in both languages (including Settings/More), one compact status card at normal Poco width, large-font status layout, no VPN/Home instruction labels, Home dismissing settings gates, canonical recipient validation and stale identity, per-recipient/channel drafts, bounded money grammar, alarm timing/storage, opt-in notification retention, app search recreation and stale floating-helper stop/start events. Tests preserve pre-existing app preferences and QR fixtures. No actual call, message, payment or cloud inference was initiated.
+Regression coverage includes Home viewport fit in both languages with no title/language/footer controls, the largest Ask Asha CTA below the tiles, one compact status card, large-font status layout, clock long-press confirmation and accessibility labeling, Home dismissing settings gates, English/Asha onboarding defaults and unsaved recreation, assistant-name normalization, trusted voice-token replay/spoof rejection, canonical recipient validation and stale identity, per-recipient/channel drafts, bounded money grammar, alarm timing/storage, opt-in notification retention, app search recreation and stale floating-helper stop/start events. Tests preserve pre-existing app preferences and QR fixtures. No actual call, message, payment or cloud inference was initiated.
 
 Build → install/update → launch → interact → observe screenshot/hierarchy/logs →
 fix → repeat. Prefer the Poco F1 at `100.79.216.34:5555`; verify its model first.
 Never reset it, uninstall unrelated apps, or expose ADB publicly.
 
 1. Home: readable large targets; no overlap with real notch or navigation bars.
-   Switch English / हिन्दी on each screen; restart and confirm the choice persists.
+   Hold the clock, confirm Open settings, then switch English / हिन्दी; restart and confirm the choice persists.
    Check long English labels with large font, translated dialogs and share text.
    Contact names, unsaved fields and QR amounts must survive switching.
 2. Family settings: persist contacts and photos after restart. Empty contacts
@@ -47,8 +47,14 @@ restores their previous values when the run finishes. Current cases:
 
 - Unsaved contact fields and the guard switch survive language switching and
   activity recreation, without writing the draft into family preferences.
-- Hindi is the default; switching to English updates Home, Help and contacts.
-  English survives recreation and relaunch, and switching back restores Hindi.
+- English is the default; language selection lives in onboarding/settings.
+  The choice survives recreation and relaunch. Home has no language selector.
+- Onboarding defaults to English/Asha; language and name drafts survive recreation,
+  and Start persists them. The completed setup does not return on relaunch.
+- Home's clock requires a long press and confirmation to access settings; a
+  normal tap does nothing. Home intents dismiss the pending confirmation.
+- Assistant names are normalized and bounded. Voice-entry tokens cannot be
+  forged, replayed, resumed after cancellation or restored to restart recognition.
 - The help screen offers large buttons, opens contacts and returns Home on Back.
 - The intent used by the floating help button returns Home from settings.
 - An incomplete backend URL cannot be saved in either language.
@@ -61,8 +67,8 @@ restores its cache files. It does not exercise a real
 camera or initiate a payment/share. The script intentionally targets emulators;
 the Poco remains the physical acceptance device.
 
-Backend checks: `python -m unittest discover -s backend -v`. The ten cases include
-malformed JSON shapes, invalid tokens, action validation and inference failures.
+Backend checks: `python -m unittest discover -s backend -v`. The 35 cases include
+malformed JSON shapes, invalid tokens, action validation, request bounds and inference failures.
 
 ## Wider concept still to implement
 

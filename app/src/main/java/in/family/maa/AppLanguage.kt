@@ -8,7 +8,7 @@ import java.util.Locale
 object AppLanguage {
     const val KEY = "language"
     fun code(context: Context): String =
-        if(context.getSharedPreferences("family",Context.MODE_PRIVATE).getString(KEY,"hi")=="en") "en" else "hi"
+        if(context.getSharedPreferences("family",Context.MODE_PRIVATE).getString(KEY,"en")=="hi") "hi" else "en"
     fun locale(context: Context): Locale = Locale.forLanguageTag("${code(context)}-IN")
     fun localizedContext(context: Context): Context = context.createConfigurationContext(
         Configuration(context.resources.configuration).apply { setLocale(locale(context)) }

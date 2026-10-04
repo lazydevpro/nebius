@@ -1,4 +1,14 @@
 <resources>
+    <string name="home_confirm_settings">सेटिंग खोलें?</string>
+    <string name="home_settings_accessibility">सेटिंग खोलें</string>
+    <string name="home_settings_gesture">सेटिंग खोलने के लिए घड़ी को दबाकर रखें।</string>
+    <string name="home_empty_family">परिवार का संपर्क नहीं जुड़ा है</string>
+    <string name="home_welcome">स्वागत है</string>
+    <string name="home_language">भाषा</string>
+    <string name="home_assistant_name">सहायक का नाम</string>
+    <string name="home_start">शुरू करें</string>
+    <string name="home_tools">अन्य काम</string>
+    <string name="home_device_details">फोन की स्थिति</string>
     <string name="home_settings">सेटिंग</string>
     <string name="home_more">और</string>
     <string name="home_family_heading">अपना परिवार</string>

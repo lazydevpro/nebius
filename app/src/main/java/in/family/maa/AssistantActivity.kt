@@ -31,6 +31,7 @@ import java.net.HttpURLConnection
 import java.net.URI
 import java.net.URL
 import java.util.Locale
+import java.util.UUID
 import java.util.concurrent.Executors
 import java.util.concurrent.Future
 
@@ -45,8 +46,11 @@ class AssistantActivity : Activity() {
     @Volatile private var resumed = false
     private var busy = false
     private var dialog: AlertDialog? = null
+    private var voiceEntry: VoiceEntry? = null
+    private var trustedSpeechNavigation = false
     private lateinit var editor: EditText
     private lateinit var state: TextView
+    private lateinit var heading: TextView
     private lateinit var ask: Button
     private lateinit var speak: Button
     private lateinit var stop: Button
@@ -55,19 +59,25 @@ class AssistantActivity : Activity() {
     internal var overlayCommand: () -> Unit = {}
         private set
     private val overlayStateListener: () -> Unit = { if (resumed && !isDestroyed) updateControls() }
-    private fun tr(id: Int): String = AppLanguage.text(this, id)
+    private fun tr(id: Int): String = when (id) {
+        R.string.assistant_title -> AssistantIdentity.displayName(this)
+        R.string.assistant_ask -> AssistantIdentity.askLabel(this)
+        else -> AppLanguage.text(this, id)
+    }
     private fun dp(value: Int): Int = MaaDesign.dp(this, value)
     override fun attachBaseContext(base: Context) { super.attachBaseContext(AppLanguage.localizedContext(base)) }
 
     override fun onCreate(saved: Bundle?) {
         super.onCreate(saved)
+        voiceEntry = VoiceEntry(intent, restored = saved != null)
         window.statusBarColor = MaaDesign.canvas; window.navigationBarColor = MaaDesign.canvas
         window.decorView.systemUiVisibility = View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR or View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR
         val content = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(20), dp(16), dp(20), dp(32)) }
         fun add(view: View, gap: Int = 12) { content.addView(view, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(gap) }) }
         fun action(id: Int, primary: Boolean = false, click: () -> Unit): Button = MaaDesign.action(this, tr(id), primary, click)
         add(action(R.string.platform_back) { finish() }, 0)
-        add(PlatformUi.text(this, 34f, MaaDesign.green, true).apply { text = tr(R.string.assistant_title); if (Build.VERSION.SDK_INT >= 28) isAccessibilityHeading = true })
+        heading = PlatformUi.text(this, 34f, MaaDesign.green, true).apply { text = tr(R.string.assistant_title); if (Build.VERSION.SDK_INT >= 28) isAccessibilityHeading = true }
+        add(heading)
         state = PlatformUi.text(this, 22f, MaaDesign.green, true).apply {
             text = tr(R.string.assistant_ready); accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE
             visibility = View.GONE
@@ -102,13 +112,27 @@ class AssistantActivity : Activity() {
         updateControls()
     }
 
-    override fun onResume() { super.onResume(); resumed = true; HelpOverlayService.addStateListener(overlayStateListener); updateControls() }
-    override fun onPause() { resumed = false; HelpOverlayService.removeStateListener(overlayStateListener); cancel(false); dialog?.dismiss(); dialog = null; super.onPause() }
-    override fun onDestroy() { cancel(false); recognizer?.destroy(); recognizer = null; worker.shutdownNow(); super.onDestroy() }
+    override fun onResume() {
+        super.onResume(); resumed = true; HelpOverlayService.addStateListener(overlayStateListener); updateControls()
+        consumeVoiceEntry()
+    }
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent); voiceEntry?.cancel(); setIntent(intent)
+        voiceEntry = VoiceEntry(intent, restored = false)
+        if (resumed) consumeVoiceEntry()
+    }
+    private fun consumeVoiceEntry() {
+        val entry = voiceEntry; voiceEntry = null
+        entry?.let { if (it.consume()) requestSpeech(it.navigateLocalAfterSpeech) }
+    }
+    override fun onPause() { resumed = false; voiceEntry?.cancel(); HelpOverlayService.removeStateListener(overlayStateListener); cancel(false); dialog?.dismiss(); dialog = null; super.onPause() }
+    override fun onDestroy() { voiceEntry?.cancel(); cancel(false); recognizer?.destroy(); recognizer = null; worker.shutdownNow(); super.onDestroy() }
     override fun onSaveInstanceState(out: Bundle) { out.putString("draft", editor.text.toString()); super.onSaveInstanceState(out) }
 
     private fun updateControls() {
         if (!::cloud.isInitialized) return
+        heading.text = AssistantIdentity.displayName(this)
+        ask.text = AssistantIdentity.askLabel(this)
         cloud.text = tr(if (cloudAllowed(endpoint())) R.string.assistant_cloud_on else R.string.assistant_cloud_off)
         val requested = HelpOverlayService.isRequested(this)
         val renderedGeneration = HelpOverlayService.generation(this)
@@ -131,6 +155,7 @@ class AssistantActivity : Activity() {
     private fun valid(token: Int): Boolean = resumed && !isDestroyed && token == generation
     private fun cancel(show: Boolean) {
         generation++
+        trustedSpeechNavigation = false
         job?.cancel(true); job = null
         connection?.disconnect(); connection = null
         runCatching { recognizer?.cancel() }
@@ -160,12 +185,17 @@ class AssistantActivity : Activity() {
             "help", "family help", "help me", "मदद", "मदद करो", "परिवार से मदद" -> "help"
             "apps", "open apps", "all apps", "ऐप", "सभी ऐप", "ऐप खोलो" -> "apps"
             "alarm", "alarms", "open alarm", "open alarms", "अलार्म", "अलार्म खोलो" -> "alarm"
+            "notifications", "open notifications", "alerts", "सूचनाएँ", "सूचनाएं", "सूचनाएँ खोलो" -> "notifications"
             "whatsapp", "open whatsapp", "family whatsapp", "photos", "videos", "व्हाट्सऐप", "व्हाट्सएप", "व्हाट्सऐप खोलो", "फोटो", "वीडियो" -> "media"
             "messages", "message", "sms", "संदेश", "मैसेज" -> "messages"
             "qr", "pay", "payment", "पैसे", "भुगतान" -> "qr"
             else -> null
         }
     }
+    internal fun spokenNavigation(text: String, trustedHomeGesture: Boolean): String? =
+        if (trustedHomeGesture) localAction(text)?.takeIf {
+            it in setOf("home", "family", "help", "apps", "alarm", "media", "messages", "qr", "notifications")
+        } else null
 
     private fun route(action: String) {
         if (!resumed) return
@@ -177,24 +207,25 @@ class AssistantActivity : Activity() {
             "messages" -> CommunicationActivity.intent(this).putExtra(CommunicationActivity.EXTRA_CHANNEL, "sms")
             "apps" -> Intent(this, AppsActivity::class.java)
             "alarm" -> Intent(this, AlarmActivity::class.java)
-            "qr" -> { state.text = tr(R.string.assistant_payment); return }
+            "notifications" -> Intent(this, NotificationCenterActivity::class.java)
+            "qr" -> MainActivity.toolsIntent(this)
             else -> { state.text = tr(R.string.assistant_unknown); return }
         }
         try { startActivity(intent) } catch (_: RuntimeException) { state.text = tr(R.string.assistant_error) }
     }
 
-    private fun requestSpeech() {
+    private fun requestSpeech(navigateLocalAfterSpeech: Boolean = false) {
         if (!resumed || busy) return
         if (!SpeechRecognizer.isRecognitionAvailable(this)) { state.text = tr(R.string.assistant_speech_unavailable); return }
         if (!prefs.getBoolean("ai_speech_notice_seen", false)) {
             dialog = AlertDialog.Builder(this).setTitle(tr(R.string.assistant_speech_title)).setMessage(tr(R.string.assistant_speech_notice))
                 .setNegativeButton(tr(R.string.assistant_not_now), null)
                 .setPositiveButton(tr(R.string.assistant_speech_allow)) { _, _ ->
-                    if (resumed) { prefs.edit().putBoolean("ai_speech_notice_seen", true).apply(); beginSpeech() }
+                    if (resumed) { prefs.edit().putBoolean("ai_speech_notice_seen", true).apply(); beginSpeech(navigateLocalAfterSpeech) }
                 }.show()
-        } else beginSpeech()
+        } else beginSpeech(navigateLocalAfterSpeech)
     }
-    private fun beginSpeech() {
+    private fun beginSpeech(navigateLocalAfterSpeech: Boolean = false) {
         if (!resumed) return
         if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
             state.text = tr(R.string.assistant_permission)
@@ -202,6 +233,7 @@ class AssistantActivity : Activity() {
             return
         }
         cancel(false)
+        trustedSpeechNavigation = navigateLocalAfterSpeech
         val token = generation
         setBusy(true, tr(R.string.assistant_listening))
         try {
@@ -213,14 +245,16 @@ class AssistantActivity : Activity() {
                     override fun onRmsChanged(rmsdB: Float) = Unit
                     override fun onBufferReceived(buffer: ByteArray?) = Unit
                     override fun onEndOfSpeech() { if (valid(token)) state.text = tr(R.string.assistant_thinking) }
-                    override fun onError(error: Int) { if (valid(token)) { generation++; setBusy(false, tr(R.string.assistant_speech_error)) } }
+                    override fun onError(error: Int) { if (valid(token)) { trustedSpeechNavigation = false; generation++; setBusy(false, tr(R.string.assistant_speech_error)) } }
                     override fun onResults(results: Bundle?) {
                         if (!valid(token)) return
+                        val navigateLocal = trustedSpeechNavigation; trustedSpeechNavigation = false
                         generation++
                         val heard = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull()?.trim().orEmpty()
                         if (heard.isEmpty() || heard.length > 1000) setBusy(false, tr(R.string.assistant_speech_error)) else {
                             editor.setText(heard)
-                            setBusy(false, AppLanguage.localizedContext(this@AssistantActivity).getString(R.string.assistant_heard, heard))
+                            setBusy(false, AppLanguage.localizedContext(this@AssistantActivity).getString(R.string.assistant_heard, heard, AssistantIdentity.askLabel(this@AssistantActivity)))
+                            spokenNavigation(heard, navigateLocal)?.let { route(it) }
                         }
                     }
                     override fun onPartialResults(partialResults: Bundle?) = Unit
@@ -232,7 +266,7 @@ class AssistantActivity : Activity() {
                     putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, false); putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1)
                 })
             }
-        } catch (_: RuntimeException) { if (valid(token)) setBusy(false, tr(R.string.assistant_speech_unavailable)) }
+        } catch (_: RuntimeException) { if (valid(token)) { trustedSpeechNavigation = false; setBusy(false, tr(R.string.assistant_speech_unavailable)) } }
     }
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
@@ -307,7 +341,39 @@ class AssistantActivity : Activity() {
         catch (_: RuntimeException) { state.text = tr(R.string.assistant_overlay_failed) }
     }
 
+    /** Foreground entry consumes an explicit in-process authorization once, never from saved state. */
+    internal class VoiceEntry(intent: Intent, restored: Boolean) {
+        private var pending = intent.getStringExtra(VOICE_TOKEN).also { intent.removeExtra(VOICE_TOKEN) }
+        var navigateLocalAfterSpeech = false
+            private set
+        init { if (restored) cancel() }
+        fun consume(): Boolean {
+            val token = pending; pending = null
+            val navigation = consumeVoiceToken(token) ?: return false
+            navigateLocalAfterSpeech = navigation
+            return true
+        }
+        fun cancel() { revokeVoiceToken(pending); pending = null; navigateLocalAfterSpeech = false }
+    }
+
     companion object {
+        private const val VOICE_TOKEN = "in.family.maa.TRUSTED_VOICE_ENTRY"
+        private const val VOICE_ENTRY_LIFETIME_MS = 15_000L
+        private var voiceToken: String? = null
+        private var voiceTokenIssuedAt = 0L
+        private var voiceTokenNavigation = false
+        /** Call only from an explicit Ask voice gesture; creates no microphone work by itself. */
+        @Synchronized fun voiceIntent(context: Context, navigateLocalAfterSpeech: Boolean = true): Intent {
+            val token = UUID.randomUUID().toString()
+            voiceToken = token; voiceTokenIssuedAt = SystemClock.elapsedRealtime(); voiceTokenNavigation = navigateLocalAfterSpeech
+            return Intent(context, AssistantActivity::class.java).putExtra(VOICE_TOKEN, token)
+        }
+        @Synchronized private fun consumeVoiceToken(token: String?): Boolean? {
+            if (token == null || token != voiceToken) return null
+            voiceToken = null
+            return voiceTokenNavigation.takeIf { SystemClock.elapsedRealtime() - voiceTokenIssuedAt in 0..VOICE_ENTRY_LIFETIME_MS }
+        }
+        @Synchronized private fun revokeVoiceToken(token: String?) { if (token != null && token == voiceToken) voiceToken = null }
         internal fun validatedEndpoint(raw: String): String? = runCatching {
             val uri = URI(raw.trim())
             if (uri.scheme != "https" || uri.host.isNullOrBlank() || uri.userInfo != null || uri.query != null || uri.fragment != null) null
