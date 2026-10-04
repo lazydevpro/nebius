@@ -6,3 +6,5 @@ local.properties
 __pycache__/
 *.log
 dist/
+# Device captures and diagnostics may contain personal phone data; retained locally.
+docs/verification/

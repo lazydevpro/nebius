@@ -1,4 +1,19 @@
-# Build status — 3 October 2026
+# Build status — 4 October 2026
+
+## Current rebuild preview
+
+- Version `0.2.0-preview` (code 2), installed on the authorized Poco F1 over its existing Tailscale ADB bridge without clearing data.
+- Compact shared clock/date/battery/connection card; no Home VPN label or explanatory paragraphs. Original colored tiles, one family panel, English/Hindi, Settings and More fit the Poco viewport. Secondary tools are under More.
+- Added local caregiver PIN, Home-role request, app catalog/search/favorites/hiding, family recipient review and drafts, optional contacts/keypad, alarms, opt-in notification history, explicit local/cloud assistant and floating navigation helper. Full BIG-suite parity and supported WhatsApp guidance are unfinished.
+- `assembleDebug assembleDebugAndroidTest lintDebug` passed. Lint: **0 errors, 71 warnings**; chiefly unused resources, draw/layout allocations, localization suggestions, compatibility/dependency notices and synchronous preference writes. No lint baseline or suppression was added.
+- **38 Android instrumentation tests passed on the Poco** in 55.47 seconds. Includes home bounds in both languages, compact status and large-font layout, modal/Home behavior, existing bilingual drafts/QR navigation, communication identity/drafts, amount parsing, alarm calculations/storage, notification retention, app search and assistant cancellation-state tests. These do not prove real alarm wake/ring, microphone/provider cancellation, network inference or external-app delivery.
+- **35 backend tests passed**, using loopback sockets and mocked upstream inference, without real credentials or external inference.
+- Current artifact: `dist/maa-debug.apk`; SHA-256 **BD4A8BEAA7D3A9640DC5974CC72F0CB0BC09BDA6A7270C5C251432C8EF3026E4**. The installed `base.apk` hash matches. It is debug-signed and not a production release.
+- Actual screenshots: `verification/poco-rebuild-home-en.png` and `verification/poco-rebuild-home-hi.png`. First English automated capture caught a window transition; replaced by a settled ADB capture of the same installed APK. Hindi capture inspected. No Maa fatal exception in the inspected crash buffer.
+- Local logs: `verification/rebuild-build.txt`, `verification/instrumentation-rebuild-poco.txt`, `verification/backend-rebuild-tests.txt`. Earlier failed iterations are retained. Device evidence is git-ignored because it may contain personal data.
+- Maa's default Home selection is still pending; Android resolved Home to its chooser. WhatsApp remains absent. Physical consent/permissions, real voice/camera, alarms after idle/reboot, actual notification actions, reference-suite audit and intended-user trials remain open.
+
+## Previous prototype checkpoint — 3 October 2026
 
 ## Hindi and English
 

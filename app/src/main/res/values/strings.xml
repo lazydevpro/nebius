@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="home_title">"Maa  ♥"</string>
+    <string name="home_title">"Maa"</string>
     <string name="greeting">"Hello. Tap a photo or ask for help."</string>
     <string name="default_status">"Tap a button or ask by voice"</string>
     <string name="family">"Family"</string>

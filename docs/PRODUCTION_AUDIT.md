@@ -1,4 +1,18 @@
-# Maa production-readiness audit — 3 October 2026
+# Maa production-readiness audit — updated 4 October 2026
+
+## Rebuild disposition
+
+**Still not production ready.** `0.2.0-preview` has passed 38 Poco instrumentation tests, 35 mocked backend tests and build/lint (0 errors, 71 warnings). It remains debug-signed. `BUILD_STATUS.md` binds these results to the installed APK hash.
+
+The payment-amount substring parser has been replaced with whole-expression validation and rejection tests. The gateway now has bounded inbound deadlines, connection/inference concurrency, rate/quota limits, per-device credentials and bounded upstream responses; production hosting/provisioning/spend controls remain open. Home/contact thumbnails decode off the UI thread at bounded size, and camera-result copy exceptions are handled. The camera replacement still needs storage-failure/atomicity acceptance.
+
+Independent review found and repaired eight integration defects (alarm occurrence reset, stale alarm actions/notification identity, modal Home handling, PIN reauthentication/draft loss, notification snapshots and an old raw-number route), plus an asynchronous floating-helper stop defect. Source recheck and focused automated coverage are recorded in `implementation/FUNCTIONAL_REVIEW.md`; source review is not physical end-to-end acceptance.
+
+Full BIG Phone/SMS role implementations, complete suite preferences, more than three family slots, supported WhatsApp screen guidance and autonomous assistant execution remain delivery gaps. The existing screen guard is experimental. Default Home selection, real microphone/camera/notification actions, locked/idle/reboot alarm behavior, MIUI background endurance, real backend inference, supported Android-version coverage and intended-user trials remain unverified. WhatsApp is not installed on the current Poco. Do not represent the preview as full parity or dependable app confinement.
+
+## Original audit evidence — 3 October 2026
+
+The historical findings below explain the original reproductions; the disposition above supersedes their implementation status.
 
 **Verdict: not production ready.** The current artifact is a development prototype.
 This review includes source inspection, APK metadata/signature inspection, existing

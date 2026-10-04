@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="home_title">"माँ  ♥"</string>
+    <string name="home_title">"माँ"</string>
     <string name="greeting">"नमस्ते। फोटो दबाएँ या बोलकर मदद लें।"</string>
     <string name="default_status">"एक बटन दबाएँ या बोलकर पूछें"</string>
     <string name="family">"परिवार"</string>

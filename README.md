@@ -4,11 +4,18 @@ An Android launcher for someone who recognises family faces and uses speed dial,
 but cannot comfortably read smartphone menus. Package: `in.family.maa`.
 Android 8+; physical target: Poco F1.
 
-The current app is a prototype and is not production ready. The researched
+The current app is version **0.2.0-preview** and is not production ready. The researched
 [rebuild plan](docs/PRODUCT_PLAN.md) covers complete BIG-suite parity, dependable
 Home behavior, an original accessible interface and bounded guided-app assistance.
 See the [feature inventory](docs/research/BIG_LAUNCHER_PARITY.md) and
 [independent code audit](docs/research/INDEPENDENT_CODE_AUDIT.md) for scope and gaps.
+
+The rebuild adds the selected compact Home design, live device status, caregiver
+PIN, app search/favorites/hiding, family message drafts, alarms, opt-in notification
+history and an explicit assistant with a floating navigation helper. Alarms,
+notifications and Shop QR are under **More**. These features do not establish full
+BIG-suite parity or reliable control inside WhatsApp. Original design concepts
+are in `output/ui-mockups`; actual device evidence stays local in `docs/verification`.
 
 ## Build on this Windows machine
 
@@ -36,10 +43,10 @@ Keep ADB on the existing private Tailscale network. No port forwarding.
 
 ## Configure once as a family member
 
-Open Family Settings; add up to three names, numbers and photos. Contacts use the
+Open Settings; add up to three names, numbers and photos. Contacts use the
 system dialler, preserving its final call control. Choose Maa as the default Home
 app in Android settings if desired. All family buttons still work without the AI
-backend. Tap **English** or **हिन्दी** at the top of any Maa screen to switch
+backend. Tap **English** or **हिन्दी** at the top of Home to switch
 languages. Hindi is the default; the choice is saved across app restarts. The
 interface, spoken prompts, shared request text and floating help button use the
 selected language. Contact names and other text you enter stay as written.
@@ -52,11 +59,12 @@ TTS voice is unavailable, prompts remain visible and the buttons still work.
 
 Unfinished family settings survive activity recreation and returning from the
 photo picker. Text fields and switches take effect only after pressing Save;
-choosing a contact photo stores that photo immediately. The help screen provides
+choosing a contact photo stays in the draft until Save. The help screen provides
 large buttons for choosing a family contact or opening the message share chooser.
 
 The floating help button requires “display over other apps” permission. Return to
-Maa settings after granting it and press the enable button again. It opens Maa;
+Maa settings after granting it and press the enable button again. It offers Home,
+family and assistant routes;
 the microphone runs only after the voice button is pressed. The service can be
 stopped from Maa settings. Some apps prevent overlays, and MIUI may need manual
 background settings. Validate those on the Poco rather than assuming them.
@@ -65,7 +73,10 @@ Optional notification access allows quieting WhatsApp notifications whose titles
 do not exactly match the configured trusted names/group names (one per line).
 Save the list and enable the switch. This is **not spam detection** or message
 blocking. Group summaries and variations in display names can be quieted too;
-test before relying on it. No message bodies or sender identities are retained.
+test before relying on it. This quieting feature does not retain message content.
+Separately, the Notifications screen can opt into local notification history
+(up to 100 entries for seven days). Turning history off clears it. Notification
+actions are available only while their live notification handles remain valid.
 
 An experimental, separately opt-in accessibility screen guard masks UI nodes in
 WhatsApp whose exact Hindi/English labels match Updates/Communities/Channels/Status
@@ -79,19 +90,22 @@ autonomous accessibility actions are implemented.
 
 ## Voice and live Nemotron
 
-Without a backend URL, Hindi and English speech use a labelled local keyword fallback for call,
-media, QR, Home and help. This is not live AI inference.
+Hindi and English commands route locally to family, messages, apps, alarms or Home.
+Speech begins on an explicit tap and the transcript is reviewed before submission.
+Cloud classification requires separate opt-in for the configured HTTPS endpoint.
 
-The backend is a standard-library Python prototype. Set `NEBIUS_API_KEY`,
-`NEBIUS_MODEL` (an available NVIDIA Nemotron model ID), and `MAA_ACCESS_TOKEN`
-(a random secret of at least 24 characters), then run `python backend/server.py`.
+The backend uses standard-library Python. Set `NEBIUS_API_KEY`,
+`NEBIUS_MODEL` (an available NVIDIA Nemotron model ID), and `MAA_DEVICE_TOKENS`
+(a JSON map of device IDs to random tokens of at least 24 characters), then run
+`python backend/server.py`. Legacy `MAA_ACCESS_TOKEN` additionally requires
+`MAA_ALLOW_LEGACY_TOKEN=1`. See [backend limits and deployment requirements](docs/implementation/BACKEND_CONTRACT.md).
 It binds to localhost port 8080. Put it behind an authenticated HTTPS deployment
 with rate limits before connecting the phone. Enter that HTTPS base URL and the
 app-specific access token in family settings. Never enter the Nebius API key in
 the APK or commit it. `NEBIUS_BASE_URL` defaults to
 `https://api.tokenfactory.nebius.com/v1` and may be overridden for your account.
 
-Only the spoken transcript is sent to the configured backend and then Nebius.
+Only submitted text, after cloud opt-in, is sent to the configured backend and then Nebius.
 The backend validates the action against a fixed allowlist, drops extra fields,
 and does not log transcripts. It cannot run arbitrary commands or pay anyone.
 The app token is stored in private app preferences; this prototype has not yet

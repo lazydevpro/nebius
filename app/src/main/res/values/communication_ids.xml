@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <item name="communication_content" type="id" />
+    <item name="communication_keypad" type="id" />
+    <item name="communication_contacts" type="id" />
+    <item name="communication_more_tools" type="id" />
+    <item name="communication_recipient_number" type="id" />
+    <item name="communication_call" type="id" />
+    <item name="communication_sms" type="id" />
+    <item name="communication_whatsapp" type="id" />
+    <item name="communication_draft" type="id" />
+    <item name="communication_review" type="id" />
+    <item name="communication_clear" type="id" />
+    <item name="communication_dial_number" type="id" />
+    <item name="communication_dial_review" type="id" />
+    <item name="communication_allow_contacts" type="id" />
+    <item name="communication_contact_search" type="id" />
+</resources>

@@ -1,0 +1,9 @@
+<resources>
+    <item name="daily_alarm_add" type="id"/>
+    <item name="daily_alarm_label" type="id"/>
+    <item name="daily_alarm_time" type="id"/>
+    <item name="daily_sos_start" type="id"/>
+    <item name="daily_sos_cancel" type="id"/>
+    <item name="daily_sos_name" type="id"/>
+    <item name="daily_sos_number" type="id"/>
+</resources>

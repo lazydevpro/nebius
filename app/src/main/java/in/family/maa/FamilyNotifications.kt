@@ -6,7 +6,17 @@ import android.app.Notification
 
 /** Opt-in quieting only. Never claims to block delivery or classify fraud. */
 class FamilyNotifications : NotificationListenerService() {
+    companion object {
+        private var connected:java.lang.ref.WeakReference<FamilyNotifications>?=null
+        fun refreshArchive() { connected?.get()?.refreshCurrent() }
+    }
+    private fun refreshCurrent() { try { NotificationArchive.onConnected(this,activeNotifications ?: emptyArray()) } catch(_:SecurityException) { NotificationArchive.onDisconnected() } }
+    override fun onListenerConnected() { connected=java.lang.ref.WeakReference(this);refreshCurrent() }
+    override fun onListenerDisconnected() { connected=null;NotificationArchive.onDisconnected() }
+    override fun onDestroy() { connected=null;NotificationArchive.onDisconnected();super.onDestroy() }
+    override fun onNotificationRemoved(sbn:StatusBarNotification) { NotificationArchive.removed(sbn.key) }
     override fun onNotificationPosted(sbn: StatusBarNotification) {
+        NotificationArchive.record(this,sbn)
         if(sbn.packageName!="com.whatsapp") return
         val prefs=getSharedPreferences("family",MODE_PRIVATE)
         if(!prefs.getBoolean("quiet",false)) return

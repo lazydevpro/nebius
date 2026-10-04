@@ -1,0 +1,12 @@
+<resources>
+    <item name="device_status" type="id"/>
+    <item name="device_status_clock" type="id"/>
+    <item name="device_status_battery" type="id"/>
+    <item name="device_status_network" type="id"/>
+    <item name="platform_back" type="id"/>
+    <item name="platform_app_search" type="id"/>
+    <item name="platform_app_list" type="id"/>
+    <item name="platform_organize" type="id"/>
+    <item name="platform_hidden_toggle" type="id"/>
+    <item name="platform_status_details" type="id"/>
+</resources>

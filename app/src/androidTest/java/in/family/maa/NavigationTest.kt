@@ -31,7 +31,7 @@ class NavigationTest {
         preferences.edit().putString(AppLanguage.KEY,previousLanguage).commit()
     }
     private fun openSettings() {
-        onView(withText("⚙  परिवार की सेटिंग")).perform(scrollTo(),click())
+        onView(withText("सेटिंग")).perform(scrollTo(),click())
         onView(withText("खोलें")).perform(click())
     }
 
@@ -42,8 +42,8 @@ class NavigationTest {
         val storedGuard=preferences.getBoolean("guard",false)
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             openSettings()
-            onView(withId(R.id.family_name_1)).perform(replaceText("Draft family"),closeSoftKeyboard())
-            onView(withId(R.id.family_phone_1)).perform(replaceText("1234567890"),closeSoftKeyboard())
+            onView(withId(R.id.family_name_1)).perform(scrollTo(),replaceText("Draft family"),closeSoftKeyboard())
+            onView(withId(R.id.family_phone_1)).perform(scrollTo(),replaceText("1234567890"),closeSoftKeyboard())
             onView(withId(R.id.guard_enabled)).perform(scrollTo(),click())
             onView(withId(R.id.language_switch)).perform(scrollTo(),click())
             onView(withText("Family settings")).check(matches(isDisplayed()))
@@ -62,20 +62,20 @@ class NavigationTest {
     @Test fun languageSwitchPersistsAcrossRecreationAndRelaunch() {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             onView(withId(R.id.language_switch)).check(matches(withText("English"))).perform(click())
-            onView(withText("Maa  ♥")).check(matches(isDisplayed()))
-            onView(withText("🎙  Ask for help")).check(matches(isDisplayed()))
+            onView(withText("Maa")).check(matches(isDisplayed()))
+            onView(withText("Ask Maa")).check(matches(isDisplayed()))
             assertEquals("en",preferences.getString(AppLanguage.KEY,null))
             assertEquals("en-IN",AppLanguage.locale(InstrumentationRegistry.getInstrumentation().targetContext).toLanguageTag())
-            onView(withText("♥\nFamily help")).perform(scrollTo(),click())
+            onView(withId(R.id.home_help_action)).perform(scrollTo(),click())
             onView(withText("♥  Share a help message")).check(matches(isDisplayed()))
             scenario.recreate()
             onView(withText("☎  Call family")).perform(scrollTo(),click())
             onView(withText("Family")).check(matches(isDisplayed()))
         }
         ActivityScenario.launch(MainActivity::class.java).use {
-            onView(withText("Maa  ♥")).check(matches(isDisplayed()))
+            onView(withText("Maa")).check(matches(isDisplayed()))
             onView(withId(R.id.language_switch)).check(matches(withText("हिन्दी"))).perform(click())
-            onView(withText("माँ  ♥")).check(matches(isDisplayed()))
+            onView(withText("माँ")).check(matches(isDisplayed()))
             assertEquals("hi",preferences.getString(AppLanguage.KEY,null))
             assertEquals("hi-IN",AppLanguage.locale(InstrumentationRegistry.getInstrumentation().targetContext).toLanguageTag())
         }
@@ -83,13 +83,13 @@ class NavigationTest {
 
     @Test fun familyHelpSupportsLargeButtonsAndBackNavigation() {
         ActivityScenario.launch(MainActivity::class.java).use {
-            onView(withText("♥\nपरिवार से मदद")).perform(scrollTo(),click())
+            onView(withId(R.id.home_help_action)).perform(scrollTo(),click())
             onView(withText("☎  परिवार को फोन करें")).check(matches(isDisplayed()))
             onView(withText("♥  मदद का संदेश साझा करें")).check(matches(isDisplayed()))
             onView(withText("☎  परिवार को फोन करें")).perform(click())
             onView(withText("परिवार")).check(matches(isDisplayed()))
             pressBack()
-            onView(withText("माँ  ♥")).check(matches(isDisplayed()))
+            onView(withText("माँ")).check(matches(isDisplayed()))
         }
     }
 
@@ -103,7 +103,7 @@ class NavigationTest {
                 activity.startActivity(Intent(activity,MainActivity::class.java)
                     .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP))
             }
-            onView(withText("माँ  ♥")).check(matches(isDisplayed()))
+            onView(withText("माँ")).check(matches(isDisplayed()))
         }
     }
 
@@ -149,7 +149,7 @@ class NavigationTest {
                 onView(withId(R.id.language_switch)).perform(scrollTo(),click())
                 onView(withHint("रकम (₹)")).check(matches(withText("125.50")))
                 pressBack()
-                onView(withText("माँ  ♥")).check(matches(isDisplayed()))
+                onView(withText("माँ")).check(matches(isDisplayed()))
             }
         } finally {
             if(previousShop==null) shop.delete() else shop.writeBytes(previousShop)

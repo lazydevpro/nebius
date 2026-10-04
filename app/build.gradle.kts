@@ -11,7 +11,7 @@ android {
     // Ship both languages so the in-app switch also works in bundle installs.
     bundle { language { enableSplit = false } }
     defaultConfig {
-        applicationId = "in.family.maa"; minSdk = 26; targetSdk = 35; versionCode = 1; versionName = "0.1.0"
+        applicationId = "in.family.maa"; minSdk = 26; targetSdk = 35; versionCode = 2; versionName = "0.2.0-preview"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
     compileOptions { sourceCompatibility = JavaVersion.VERSION_17; targetCompatibility = JavaVersion.VERSION_17 }

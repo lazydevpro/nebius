@@ -1,5 +1,9 @@
 # Device acceptance checklist
 
+2026-10-04 rebuild result: **38/38 Android instrumentation tests passed on the Poco F1**, plus **35 mocked local backend tests**. Build/lint passed (0 errors, 71 warnings). See `BUILD_STATUS.md` for the exact installed artifact and evidence. Prior counts below describe the older prototype. Passing automated tests does not complete the physical checklist.
+
+New regression coverage includes viewport fit in both languages (including Settings/More), one compact status card at normal Poco width, large-font status layout, no VPN/Home instruction labels, Home dismissing settings gates, canonical recipient validation and stale identity, per-recipient/channel drafts, bounded money grammar, alarm timing/storage, opt-in notification retention, app search recreation and stale floating-helper stop/start events. Tests preserve pre-existing app preferences and QR fixtures. No actual call, message, payment or cloud inference was initiated.
+
 Build → install/update → launch → interact → observe screenshot/hierarchy/logs →
 fix → repeat. Prefer the Poco F1 at `100.79.216.34:5555`; verify its model first.
 Never reset it, uninstall unrelated apps, or expose ADB publicly.
