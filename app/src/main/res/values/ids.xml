@@ -1,0 +1,8 @@
+<resources>
+    <item name="language_switch" type="id" />
+    <item name="family_name_1" type="id" />
+    <item name="family_phone_1" type="id" />
+    <item name="backend_url" type="id" />
+    <item name="quiet_enabled" type="id" />
+    <item name="guard_enabled" type="id" />
+</resources>
