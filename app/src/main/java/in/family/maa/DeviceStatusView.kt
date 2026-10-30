@@ -42,6 +42,9 @@ class DeviceStatusView(context: Context) : LinearLayout(context) {
         set(value) { field = value; isClickable = value != null; refresh() }
     var onOpenSettings: (() -> Unit)? = null
         set(value) { field=value;isLongClickable=value!=null }
+    var onSwitchLanguage: (() -> Unit)? = null
+        set(value) { field = value; langBtn?.visibility = if (value != null) View.VISIBLE else View.GONE }
+    private var langBtn: Button? = null
     private val clock = PlatformUi.text(context, 52f, PlatformUi.GREEN, true)
     private val date = PlatformUi.text(context, 18f, PlatformUi.INK, true)
     private val battery = PlatformUi.text(context, 30f, PlatformUi.INK, true)
@@ -88,7 +91,26 @@ class DeviceStatusView(context: Context) : LinearLayout(context) {
         mainRow.addView(divider)
         mainRow.addView(statsRow)
         addView(mainRow, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT))
-        addView(date, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT).apply { topMargin = PlatformUi.dp(context, 2) })
+        val dateRow = LinearLayout(context).apply {
+            orientation = HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            val isHi = AppLanguage.isHindi(context)
+            addView(date, LayoutParams(0, LayoutParams.WRAP_CONTENT, 1f))
+            langBtn = Button(context).apply {
+                text = if (isHi) "Eng" else "हिंदी"
+                textSize = 14f
+                setTypeface(typeface, Typeface.BOLD)
+                setTextColor(Color.rgb(15, 119, 113))
+                background = PlatformUi.rounded(Color.rgb(230, 244, 241), PlatformUi.dp(context, 12).toFloat())
+                minHeight = PlatformUi.dp(context, 32); minimumHeight = PlatformUi.dp(context, 32)
+                setPadding(PlatformUi.dp(context, 10), 0, PlatformUi.dp(context, 10), 0)
+                layoutParams = LayoutParams(LayoutParams.WRAP_CONTENT, PlatformUi.dp(context, 32))
+                visibility = View.GONE
+                setOnClickListener { onSwitchLanguage?.invoke() }
+            }
+            addView(langBtn)
+        }
+        addView(dateRow, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT).apply { topMargin = PlatformUi.dp(context, 2) })
         // The connection graphic and card's spoken summary are sufficient on sparse Home.
         network.visibility = View.GONE
         setOnClickListener { onOpenDetails?.invoke() }
@@ -144,6 +166,7 @@ class DeviceStatusView(context: Context) : LinearLayout(context) {
             setSpan(RelativeSizeSpan(.28f), numbers.length + 1, length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
         }
         date.text = status.date(context)
+        langBtn?.text = if (AppLanguage.isHindi(context)) "Eng" else "हिंदी"
         battery.text = status.batteryPercent?.let { java.text.NumberFormat.getPercentInstance(locale).format(it / 100.0) }
             ?: "—"
         network.text = status.homeNetworkCaption(local)
@@ -408,8 +431,12 @@ internal object PlatformUi {
         if (bold) setTypeface(typeface, Typeface.BOLD)
     }
     fun button(context: Context, label: String, action: () -> Unit): Button = Button(context).apply {
-        text = label; textSize = 20f; isAllCaps = false; setTextColor(GREEN)
-        gravity = Gravity.CENTER; minHeight = dp(context, 64)
+        val isBack = label.equals("Back", ignoreCase = true) || label == "वापस"
+        text = if (isBack) "←  $label" else label
+        textSize = 20f; isAllCaps = false; setTextColor(GREEN)
+        if (isBack) setTypeface(typeface, Typeface.BOLD)
+        gravity = Gravity.CENTER; minHeight = dp(context, 64); minimumHeight = dp(context, 64)
+        stateListAnimator = null; elevation = dp(context, 2).toFloat(); clipToOutline = false
         setPadding(dp(context, 14), dp(context, 10), dp(context, 14), dp(context, 10))
         background = RippleDrawable(ColorStateList.valueOf(0x22336B50), rounded(Color.WHITE, dp(context, 18).toFloat()), null)
         setOnClickListener { action() }

@@ -11,6 +11,7 @@ import android.content.SharedPreferences
 import android.content.res.Configuration
 import android.graphics.Color
 import android.graphics.PixelFormat
+import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.IBinder
@@ -44,6 +45,10 @@ class HelpOverlayService : Service() {
     private val languageListener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
         if (key == AppLanguage.KEY || key == AssistantIdentity.KEY_NAME) handler.post { if (!stopping) { updateNotification(); render() } }
     }
+    private val proactiveUpdateListener: () -> Unit = {
+        handler.post { if (!stopping) render() }
+        Unit
+    }
     private val permissionCheck = object : Runnable {
         override fun run() {
             if (stopping) return
@@ -64,6 +69,7 @@ class HelpOverlayService : Service() {
         super.onCreate()
         windows = getSystemService(WindowManager::class.java)
         languagePrefs.registerOnSharedPreferenceChangeListener(languageListener)
+        ProactiveAsha.addListener(proactiveUpdateListener)
     }
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         if (intent?.action == ACTION_STOP) {
@@ -86,10 +92,15 @@ class HelpOverlayService : Service() {
         manager.createNotificationChannel(NotificationChannel(CHANNEL, tr(R.string.assistant_overlay_channel), NotificationManager.IMPORTANCE_LOW))
         val open = PendingIntent.getActivity(this, 80, Intent(this, AssistantActivity::class.java), PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
         val close = PendingIntent.getService(this, 81, Intent(this, HelpOverlayService::class.java).setAction(ACTION_STOP), PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
-        startForeground(NOTIFICATION, Notification.Builder(this, CHANNEL).setSmallIcon(R.drawable.ic_maa)
+        val notif = Notification.Builder(this, CHANNEL).setSmallIcon(R.drawable.ic_maa)
             .setContentTitle(tr(R.string.assistant_title)).setContentText(tr(R.string.assistant_overlay_notification))
             .setContentIntent(open).setOngoing(true).setOnlyAlertOnce(true)
-            .addAction(Notification.Action.Builder(null, tr(R.string.assistant_overlay_stop), close).build()).build())
+            .addAction(Notification.Action.Builder(null, tr(R.string.assistant_overlay_stop), close).build()).build()
+        if (Build.VERSION.SDK_INT >= 34) {
+            startForeground(NOTIFICATION, notif, android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE)
+        } else {
+            startForeground(NOTIFICATION, notif)
+        }
     }
     private fun screen(): DisplayMetrics = DisplayMetrics().also {
         @Suppress("DEPRECATION") windows.defaultDisplay.getRealMetrics(it)
@@ -114,15 +125,64 @@ class HelpOverlayService : Service() {
         fun button(id: Int, primary: Boolean = false, click: () -> Unit): View = MaaDesign.action(this, tr(id), primary, click).also {
             content.addView(it, LinearLayout.LayoutParams(-1, -2).apply { if (content.childCount > 1) topMargin = dp(6) })
         }
+        val hasAlert = ProactiveAsha.hasUnreadUpdates(this@HelpOverlayService)
+        val hasDueMed = MedicineManager.hasDueMedicine(this@HelpOverlayService)
+        val photoAlert = ProactiveAsha.showsPhotoAlert(this@HelpOverlayService)
+        val alertColor = if (photoAlert) MaaDesign.photoYellow else Color.rgb(220, 38, 38)
+        val foreground = if (photoAlert) MaaDesign.ink else Color.WHITE
         val handle = if (!expanded) {
-            button(R.string.assistant_overlay_bubble, true) { expanded = true; render() }.apply { contentDescription = tr(R.string.assistant_overlay_expand) }
+            val alertLabel = when {
+                hasDueMed -> if (AppLanguage.isHindi(this@HelpOverlayService)) "💊 दवा का समय" else "💊 Medicine Time"
+                photoAlert -> if (AppLanguage.isHindi(this@HelpOverlayService)) "नई फ़ोटो" else "New Photo"
+                hasAlert -> if (AppLanguage.isHindi(this@HelpOverlayService)) "🔔 नया अपडेट" else "🔔 New Alert"
+                else -> tr(R.string.assistant_overlay_bubble)
+            }
+            val btnColor = if (hasAlert) alertColor else Color.rgb(15, 119, 113)
+            val iconSymbol = when {
+                hasDueMed -> "pill"
+                photoAlert -> "photo"
+                hasAlert -> "bell"
+                else -> "mic"
+            }
+            button(R.string.assistant_overlay_bubble, true) {
+                if (hasAlert) {
+                    open(AssistantActivity.readUpdateIntent(this@HelpOverlayService))
+                } else {
+                    open(AssistantActivity.voiceIntent(this@HelpOverlayService))
+                }
+            }.apply {
+                (this as? android.widget.Button)?.text = alertLabel
+                (this as? android.widget.Button)?.background = MaaDesign.shape(this@HelpOverlayService, btnColor, 20)
+                (this as? android.widget.Button)?.setTextColor(foreground)
+                contentDescription = tr(R.string.assistant_overlay_expand)
+                val icon = MaaIcon(this@HelpOverlayService, iconSymbol, foreground).apply { setBounds(0, 0, dp(28), dp(28)) }
+                (this as? android.widget.Button)?.setCompoundDrawables(icon, null, null, null)
+                (this as? android.widget.Button)?.compoundDrawablePadding = dp(8)
+                setOnLongClickListener { expanded = true; render(); true }
+            }
         } else {
             button(R.string.assistant_overlay_move) { expanded = false; render() }.apply { contentDescription = tr(R.string.assistant_overlay_move_hint) }
         }
         makeMovable(handle)
         if (expanded) {
-            button(R.string.assistant_ask, true) { open(AssistantActivity.voiceIntent(this, navigateLocalAfterSpeech = false)) }
-            button(R.string.assistant_family) { open(CommunicationActivity.intent(this)) }
+            val askLabel = when {
+                hasDueMed -> if (AppLanguage.isHindi(this)) "💊 दवा का समय (सुनें)" else "💊 Medicine Time"
+                photoAlert -> if (AppLanguage.isHindi(this)) "📷 नई फ़ोटो देखें" else "📷 See New Photo"
+                hasAlert -> if (AppLanguage.isHindi(this)) "🔔 नया अपडेट सुनें" else "🔔 Listen to Alert"
+                else -> tr(R.string.assistant_ask)
+            }
+            button(R.string.assistant_ask, true) {
+                if (hasAlert) open(AssistantActivity.readUpdateIntent(this))
+                else open(AssistantActivity.voiceIntent(this, navigateLocalAfterSpeech = true))
+            }.apply {
+                (this as? android.widget.Button)?.text = askLabel
+                if (hasAlert) {
+                    (this as? android.widget.Button)?.background = MaaDesign.shape(this@HelpOverlayService, alertColor, 20)
+                    (this as? android.widget.Button)?.setTextColor(foreground)
+                }
+            }
+            button(R.string.home_gallery) { open(Intent(this, GalleryActivity::class.java)) }
+            button(R.string.assistant_family) { open(CommunicationActivity.intent(this).putExtra(CommunicationActivity.EXTRA_MODE, "phone")) }
             button(R.string.assistant_home) { open(Intent(this, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)) }
             button(R.string.assistant_overlay_collapse) { expanded = false; render() }
             button(R.string.assistant_overlay_close) { stop(this) }
@@ -150,7 +210,10 @@ class HelpOverlayService : Service() {
         })
         try {
             windows.addView(root, layout)
-            root.post { if (panel === root && !stopping) clampAndUpdate(false) }
+            root.post { if (panel === root && !stopping && root.isAttachedToWindow) clampAndUpdate(false) }
+        } catch (_: android.view.WindowManager.BadTokenException) {
+            Toast.makeText(this, tr(R.string.assistant_overlay_permission), Toast.LENGTH_LONG).show()
+            finishRequest()
         } catch (_: RuntimeException) { finishRequest() }
     }
     private fun open(intent: Intent) {
@@ -201,6 +264,7 @@ class HelpOverlayService : Service() {
     private fun clampAndUpdate(persist: Boolean) {
         val view = panel ?: return
         val layout = params ?: return
+        if (!view.isAttachedToWindow) return
         val bounds = screen()
         val margin = dp(12)
         val maxX = (bounds.widthPixels - view.width - margin).coerceAtLeast(margin)
@@ -221,6 +285,7 @@ class HelpOverlayService : Service() {
     override fun onConfigurationChanged(newConfig: Configuration) { super.onConfigurationChanged(newConfig); render() }
     override fun onDestroy() {
         stopping = true; handler.removeCallbacksAndMessages(null)
+        ProactiveAsha.removeListener(proactiveUpdateListener)
         languagePrefs.unregisterOnSharedPreferenceChangeListener(languageListener)
         removePanel(); stopForeground(STOP_FOREGROUND_REMOVE); super.onDestroy()
     }

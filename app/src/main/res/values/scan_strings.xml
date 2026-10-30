@@ -1,0 +1,20 @@
+<resources>
+    <string name="scan_title">Scan Medicine</string>
+    <string name="scan_button">Scan Medicine</string>
+    <string name="scan_hint">Hold the medicine name in front of the camera</string>
+    <string name="scan_reading">Reading the medicine…</string>
+    <string name="scan_open">Opening the medicine scanner…</string>
+    <string name="scan_unreadable">I could not read this. Hold the name closer, in good light.</string>
+    <string name="scan_no_internet">I could not connect. Check the internet and try again.</string>
+    <string name="scan_used_for">Used for: %1$s</string>
+    <string name="scan_is">This is %1$s.</string>
+    <string name="scan_for">It is used for %1$s.</string>
+    <string name="scan_expired">Please do not take this. It expired in %1$s. Show it to your family.</string>
+    <string name="scan_matches">This looks like your %1$s. Your time is %2$s, %3$s.</string>
+    <string name="scan_label_says">The pack says: %1$s.</string>
+    <string name="scan_no_time">This is not in your medicine list, so please ask your doctor or family when to take it.</string>
+    <string name="scan_check">I can misread labels. Check with family if you are unsure.</string>
+    <string name="scan_hear_again">Hear again</string>
+    <string name="scan_add">Add to my medicines</string>
+    <string name="scan_again">Scan another medicine</string>
+</resources>

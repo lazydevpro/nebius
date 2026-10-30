@@ -115,6 +115,25 @@ class IntentTests(unittest.TestCase):
     def test_discard_extra_model_fields(self):
         self.assertEqual(validate_intent({"action": "help", "command": "pay"}), {"action": "help"})
 
+    def test_recipient_and_spoken_fields_are_preserved(self):
+        intent = {
+            "action": "call",
+            "target": "Rahul",
+            "target_type": "name",
+            "channel": "phone",
+            "spoken_response": "Calling Rahul",
+            "command": "malicious_script",
+        }
+        validated = validate_intent(intent)
+        self.assertEqual(validated, {
+            "action": "call",
+            "target": "Rahul",
+            "target_type": "name",
+            "channel": "phone",
+            "spoken_response": "Calling Rahul",
+        })
+        self.assertNotIn("command", validated)
+
     def test_malformed_model_json_is_rejected(self):
         for value in (None, [], "call", 123, {"action": []}, {"action": {"command": "pay"}}):
             with self.subTest(value=value), self.assertRaises(ValueError):
@@ -154,6 +173,8 @@ class GatewayTests(unittest.TestCase):
             response = urlopen(request, timeout=2)
         except HTTPError as error:
             response = error
+        except (ConnectionResetError, ConnectionAbortedError):
+            return 503, {}
         with response:
             return response.code, json.load(response)
 
@@ -178,6 +199,19 @@ class GatewayTests(unittest.TestCase):
                 break
             output.extend(chunk)
         return bytes(output)
+
+    def test_candidates_in_request_are_passed_to_inference(self):
+        entered = threading.Event()
+        def mock_infer(text, config, candidates=None):
+            self.assertEqual(candidates, ["Rahul", "Priya"])
+            entered.set()
+            return {"action": "call", "target": "Rahul", "spoken_response": "Calling Rahul"}
+        self.inference.side_effect = mock_infer
+        code, body = self.request(value={"text": "Call Rahul", "candidates": ["Rahul", "Priya"]})
+        self.assertEqual(code, 200)
+        self.assertEqual(body["action"], "call")
+        self.assertEqual(body["target"], "Rahul")
+        self.assertTrue(entered.is_set())
 
     def test_valid_request_reaches_mock_inference(self):
         self.assertEqual(self.request(), (200, {"action": "call"}))
@@ -377,6 +411,16 @@ class UpstreamTests(unittest.TestCase):
 
     def setUp(self):
         self.config = GatewayConfig.from_env(environment())
+
+    def test_candidates_included_in_system_prompt(self):
+        response = self.Response(json.dumps({"choices": [{"message": {"content": '{"action":"call","target":"Rahul"}'}}]}).encode())
+        with patch("server.open_upstream", return_value=response) as upstream:
+            result = infer("Call Rahul", self.config, candidates=["Rahul", "Mom"])
+            self.assertEqual(result, {"action": "call", "target": "Rahul"})
+        request = upstream.call_args.args[0]
+        payload = json.loads(request.data)
+        system_content = payload["messages"][0]["content"]
+        self.assertIn("Rahul, Mom", system_content)
 
     def test_valid_mock_response_and_request_schema(self):
         response = self.Response(json.dumps({"choices": [{"message": {"content": '{"action":"help","command":"ignored"}'}}]}).encode())

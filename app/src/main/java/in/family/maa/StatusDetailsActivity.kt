@@ -32,9 +32,14 @@ class StatusDetailsActivity : Activity() {
         window.decorView.systemUiVisibility = View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR or View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR
         val root = LinearLayout(this).apply {
             id = R.id.platform_status_details; orientation = LinearLayout.VERTICAL
+            clipChildren = false; clipToPadding = false
             setPadding(PlatformUi.dp(this@StatusDetailsActivity, 20), PlatformUi.dp(this@StatusDetailsActivity, 16), PlatformUi.dp(this@StatusDetailsActivity, 20), PlatformUi.dp(this@StatusDetailsActivity, 28))
         }
-        val scroll = ScrollView(this).apply { setBackgroundColor(PlatformUi.CREAM); isFillViewport = true; addView(root) }
+        val scroll = ScrollView(this).apply {
+            setBackgroundColor(PlatformUi.CREAM); isFillViewport = true
+            clipChildren = false; clipToPadding = false
+            addView(root)
+        }
         root.addView(PlatformUi.button(this, label(R.string.platform_back)) { finish() }.apply { id = R.id.platform_back }, PlatformUi.params(this, 0))
         root.addView(PlatformUi.text(this, 30f, bold = true).apply { text = label(R.string.platform_status); if (Build.VERSION.SDK_INT >= 28) isAccessibilityHeading = true }, PlatformUi.params(this))
         root.addView(PlatformUi.text(this, 18f).apply { text = label(R.string.platform_status_description) }, PlatformUi.params(this, 8))

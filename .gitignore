@@ -2,9 +2,13 @@
 build/
 app/build/
 local.properties
+secrets.properties
 .env
+.wrangler/
+cloudflare/wrangler.toml
 __pycache__/
 *.log
 dist/
 # Device captures and diagnostics may contain personal phone data; retained locally.
 docs/verification/
+screen_*.png

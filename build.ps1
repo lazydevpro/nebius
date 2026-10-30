@@ -7,5 +7,14 @@ $sdkPath = $env:ANDROID_HOME.Replace('\','/').Replace(':','\:')
 Set-Content -LiteralPath 'local.properties' -Value "sdk.dir=$sdkPath"
 & .\gradlew.bat assembleDebug lintDebug --console=plain
 if ($LASTEXITCODE -ne 0) { throw 'Android build failed' }
+$version = "1.0.2"
 New-Item -ItemType Directory -Force 'dist' | Out-Null
-Copy-Item -LiteralPath 'app\build\outputs\apk\debug\app-debug.apk' -Destination 'dist\maa-debug.apk'
+Get-ChildItem -Path 'dist' -Filter '*.apk' | Remove-Item -Force -ErrorAction SilentlyContinue
+Copy-Item -LiteralPath 'app\build\outputs\apk\debug\app-debug.apk' -Destination "dist\maa-v$version.apk"
+
+$oneDriveBuilds = "$env:USERPROFILE\OneDrive\MaaBuilds"
+if (Test-Path "$env:USERPROFILE\OneDrive") {
+    New-Item -ItemType Directory -Force $oneDriveBuilds | Out-Null
+    Get-ChildItem -Path $oneDriveBuilds -Filter '*.apk' | Remove-Item -Force -ErrorAction SilentlyContinue
+    Copy-Item -LiteralPath 'app\build\outputs\apk\debug\app-debug.apk' -Destination "$oneDriveBuilds\maa-v$version.apk"
+}

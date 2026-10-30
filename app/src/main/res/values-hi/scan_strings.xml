@@ -1,0 +1,20 @@
+<resources>
+    <string name="scan_title">दवा पहचानें</string>
+    <string name="scan_button">दवा पहचानें</string>
+    <string name="scan_hint">दवा का नाम कैमरे के सामने रखें</string>
+    <string name="scan_reading">दवा पढ़ रही हूँ…</string>
+    <string name="scan_open">दवा पहचानने का कैमरा खोल रही हूँ…</string>
+    <string name="scan_unreadable">मैं इसे पढ़ नहीं पाई। नाम पास लाएँ और रोशनी में रखें।</string>
+    <string name="scan_no_internet">मैं जुड़ नहीं पाई। इंटरनेट देखकर फिर से कोशिश करें।</string>
+    <string name="scan_used_for">किसलिए: %1$s</string>
+    <string name="scan_is">यह %1$s है।</string>
+    <string name="scan_for">यह %1$s के लिए है।</string>
+    <string name="scan_expired">यह दवा न लें। इसकी तारीख़ %1$s में ख़त्म हो गई। इसे परिवार को दिखाएँ।</string>
+    <string name="scan_matches">यह आपकी %1$s लगती है। आपका समय %2$s है, %3$s।</string>
+    <string name="scan_label_says">पैक पर लिखा है: %1$s।</string>
+    <string name="scan_no_time">यह आपकी दवाओं की सूची में नहीं है, इसलिए कब लेनी है यह डॉक्टर या परिवार से पूछें।</string>
+    <string name="scan_check">मैं लेबल ग़लत भी पढ़ सकती हूँ। शक हो तो परिवार से पूछें।</string>
+    <string name="scan_hear_again">फिर से सुनें</string>
+    <string name="scan_add">मेरी दवाओं में जोड़ें</string>
+    <string name="scan_again">दूसरी दवा पहचानें</string>
+</resources>

@@ -53,4 +53,15 @@
     <string name="assistant_move_right">Move right</string>
     <string name="assistant_move_up">Move up</string>
     <string name="assistant_move_down">Move down</string>
+    <string name="assistant_calling_person">Calling %1$s…</string>
+    <string name="assistant_video_calling">Video calling %1$s on WhatsApp…</string>
+    <string name="assistant_video_open_chat">Opening %1$s on WhatsApp. Tap Call, then Video call.</string>
+    <string name="assistant_contact_not_found">Could not find “%1$s” in family contacts.</string>
+    <string name="assistant_subtitle">Your Companion</string>
+    <string name="assistant_listening_live">Listening… Speak now</string>
+    <string name="assistant_thinking_live">Thinking…</string>
+    <string name="assistant_speaking_live">Asha is speaking…</string>
+    <string name="assistant_you_said">You said:</string>
+    <string name="assistant_asha_said">Asha:</string>
+    <string name="assistant_tap_to_speak_prompt">Tap to speak</string>
 </resources>

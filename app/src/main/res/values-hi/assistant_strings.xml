@@ -53,4 +53,15 @@
     <string name="assistant_move_right">दाएँ खिसकाएँ</string>
     <string name="assistant_move_up">ऊपर खिसकाएँ</string>
     <string name="assistant_move_down">नीचे खिसकाएँ</string>
+    <string name="assistant_calling_person">%1$s को कॉल लगा रहे हैं…</string>
+    <string name="assistant_video_calling">%1$s को WhatsApp पर वीडियो कॉल लगा रही हूँ…</string>
+    <string name="assistant_video_open_chat">WhatsApp पर %1$s को खोल रही हूँ। कॉल बटन दबाएँ, फिर वीडियो कॉल चुनें।</string>
+    <string name="assistant_contact_not_found">परिवार में “%1$s” नहीं मिले।</string>
+    <string name="assistant_subtitle">आपकी साथी</string>
+    <string name="assistant_listening_live">सुन रही हूँ… बोलिए</string>
+    <string name="assistant_thinking_live">समझ रही हूँ…</string>
+    <string name="assistant_speaking_live">आशा बोल रही है…</string>
+    <string name="assistant_you_said">आपने कहा:</string>
+    <string name="assistant_asha_said">आशा:</string>
+    <string name="assistant_tap_to_speak_prompt">बोलने के लिए दबाएँ</string>
 </resources>

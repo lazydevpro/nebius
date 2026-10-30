@@ -73,6 +73,92 @@ class AssistantTest {
         }
     }
 
+    @Test fun parsedIntentExtractsTargetAndSpokenResponse() {
+        val json = """{"action":"call","target":"Rahul","target_type":"name","channel":"phone","spoken_response":"Calling Rahul"}"""
+        val parsed = AssistantActivity.validatedIntent(json)
+        assertNotNull(parsed)
+        assertEquals("call", parsed!!.action)
+        assertEquals("Rahul", parsed.target)
+        assertEquals("name", parsed.targetType)
+        assertEquals("phone", parsed.channel)
+        assertEquals("Calling Rahul", parsed.spokenResponse)
+
+        val minimal = AssistantActivity.validatedIntent("""{"action":"home"}""")
+        assertNotNull(minimal)
+        assertEquals("home", minimal!!.action)
+        assertNull(minimal.target)
+
+        assertNull(AssistantActivity.validatedIntent("""{"action":"invalid_action"}"""))
+        assertNull(AssistantActivity.validatedIntent("not json"))
+    }
+
+    @Test fun extractLocalCallParsesEnglishAndHindiCallPhrases() {
+        ActivityScenario.launch(AssistantActivity::class.java).use { scenario ->
+            scenario.onActivity { activity ->
+                assertEquals("rahul", activity.extractLocalCall("call rahul"))
+                assertEquals("rahul", activity.extractLocalCall("Call Rahul!"))
+                assertEquals("mom", activity.extractLocalCall("dial mom"))
+                assertEquals("my son", activity.extractLocalCall("phone my son"))
+                assertEquals("राहुल", activity.extractLocalCall("राहुल को कॉल करो"))
+                assertEquals("अमित", activity.extractLocalCall("अमित को फोन लगाओ"))
+                assertEquals("रोहन", activity.extractLocalCall("कॉल रोहन"))
+                assertEquals("रोहन", activity.extractLocalCall("फोन रोहन"))
+                assertNull(activity.extractLocalCall("home"))
+                assertNull(activity.extractLocalCall("open alarms"))
+                assertNull(activity.extractLocalCall("all apps"))
+            }
+        }
+    }
+
+    @Test fun familyDirectoryFindMatchResolvesNamesAliasesAndNumbers() {
+        val prev1Name = prefs.getString("name1", null)
+        val prev1Phone = prefs.getString("phone1", null)
+        val prev2Name = prefs.getString("name2", null)
+        val prev2Phone = prefs.getString("phone2", null)
+        try {
+            prefs.edit()
+                .putString("name1", "Rahul")
+                .putString("phone1", "+919876543210")
+                .putString("name2", "Priya")
+                .putString("phone2", "+919876543211")
+                .commit()
+
+            // Exact and case-insensitive
+            val m1 = FamilyDirectory.findMatch(context, "rahul")
+            assertNotNull(m1)
+            assertEquals("Rahul", m1!!.name)
+            assertEquals("+919876543210", m1.canonicalNumber)
+
+            val m2 = FamilyDirectory.findMatch(context, "PRIYA")
+            assertNotNull(m2)
+            assertEquals("Priya", m2!!.name)
+
+            // Slot numbers
+            val slot1 = FamilyDirectory.findMatch(context, "first contact")
+            assertNotNull(slot1)
+            assertEquals("Rahul", slot1!!.name)
+
+            val slot2 = FamilyDirectory.findMatch(context, "दूसरा")
+            assertNotNull(slot2)
+            assertEquals("Priya", slot2!!.name)
+
+            // Direct phone number
+            val direct = FamilyDirectory.findMatch(context, "9876543219")
+            assertNotNull(direct)
+            assertEquals("+919876543219", direct!!.canonicalNumber)
+
+            // Unknown returns null
+            assertNull(FamilyDirectory.findMatch(context, "Unknown Person"))
+        } finally {
+            prefs.edit().apply {
+                if (prev1Name != null) putString("name1", prev1Name) else remove("name1")
+                if (prev1Phone != null) putString("phone1", prev1Phone) else remove("phone1")
+                if (prev2Name != null) putString("name2", prev2Name) else remove("name2")
+                if (prev2Phone != null) putString("phone2", prev2Phone) else remove("phone2")
+            }.commit()
+        }
+    }
+
     @Test fun onlyUncredentialedHttpsEndpointsAreAccepted() {
         assertEquals("https://example.test/base", AssistantActivity.validatedEndpoint(" https://example.test/base/ "))
         for (url in listOf("http://example.test", "https://name:password@example.test", "https://example.test?token=secret", "https://example.test/#fragment", "javascript:alert(1)", "https:///missing", "")) {

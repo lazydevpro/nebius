@@ -1,15 +1,31 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <uses-permission android:name="android.permission.CAMERA"/>
     <uses-permission android:name="android.permission.RECORD_AUDIO"/>
+    <uses-permission android:name="android.permission.CALL_PHONE"/>
+    <uses-permission android:name="android.permission.SEND_SMS"/>
+    <uses-permission android:name="android.permission.READ_CALL_LOG"/>
+    <uses-permission android:name="android.permission.READ_PHONE_STATE"/>
     <uses-permission android:name="android.permission.INTERNET"/>
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
     <uses-permission android:name="android.permission.READ_CONTACTS"/>
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32"/>
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="28"/>
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES"/>
+    <uses-permission android:name="android.permission.READ_MEDIA_VIDEO"/>
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM"/>
+    <uses-permission android:name="android.permission.USE_EXACT_ALARM"/>
+    <uses-permission android:name="android.permission.VIBRATE"/>
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK"/>
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW"/>
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE"/>
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+
+    <uses-feature android:name="android.hardware.camera" android:required="false"/>
+    <uses-feature android:name="android.hardware.camera.autofocus" android:required="false"/>
+    <uses-feature android:name="android.hardware.telephony" android:required="false"/>
+    <uses-feature android:name="android.hardware.microphone" android:required="false"/>
     <queries>
         <package android:name="com.whatsapp"/>
         <package android:name="com.whatsapp.w4b"/>
@@ -18,7 +34,7 @@
         <intent><action android:name="android.intent.action.TTS_SERVICE"/></intent>
         <intent><action android:name="android.media.action.IMAGE_CAPTURE"/></intent>
     </queries>
-    <application android:label="माँ • Maa" android:theme="@android:style/Theme.Material.Light.NoActionBar" android:allowBackup="false" android:dataExtractionRules="@xml/data_extraction_rules" android:usesCleartextTraffic="false" android:icon="@drawable/ic_maa">
+    <application android:label="माँ • Maa" android:theme="@android:style/Theme.Material.Light.NoActionBar" android:allowBackup="false" android:dataExtractionRules="@xml/data_extraction_rules" android:usesCleartextTraffic="true" android:icon="@drawable/ic_maa">
         <activity android:name=".MainActivity" android:exported="true" android:launchMode="singleTask" android:clearTaskOnLaunch="true">
             <intent-filter><action android:name="android.intent.action.MAIN"/><category android:name="android.intent.category.LAUNCHER"/></intent-filter>
             <intent-filter><action android:name="android.intent.action.MAIN"/><category android:name="android.intent.category.HOME"/><category android:name="android.intent.category.DEFAULT"/></intent-filter>
@@ -27,6 +43,10 @@
         <activity android:name=".AssistantActivity" android:exported="false"/>
         <activity android:name=".StatusDetailsActivity" android:exported="false"/>
         <activity android:name=".CommunicationActivity" android:exported="false"/>
+        <activity android:name=".MissedCallsActivity" android:exported="false"/>
+        <activity android:name=".GalleryActivity" android:exported="false"/>
+        <activity android:name=".CameraActivity" android:exported="false" android:screenOrientation="portrait"/>
+        <activity android:name=".MedicineScanActivity" android:exported="false" android:screenOrientation="portrait"/>
         <activity android:name=".PhoneDialerActivity" android:exported="false"/>
         <activity android:name=".PhoneContactsActivity" android:exported="false"/>
         <activity android:name=".AlarmActivity" android:exported="false" android:launchMode="singleTop"/>
@@ -34,6 +54,15 @@
         <activity android:name=".NotificationCenterActivity" android:exported="false"/>
         <service android:name=".MaaAlarmRingService" android:exported="false" android:foregroundServiceType="mediaPlayback"/>
         <receiver android:name=".MaaAlarmReceiver" android:exported="false"/>
+        <receiver android:name=".MedicineAlarmReceiver" android:exported="false">
+            <intent-filter>
+                <action android:name="in.family.maa.MEDICINE_ALARM_TRIGGER"/>
+                <action android:name="android.intent.action.BOOT_COMPLETED"/>
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED"/>
+                <action android:name="android.intent.action.TIME_SET"/>
+                <action android:name="android.intent.action.TIMEZONE_CHANGED"/>
+            </intent-filter>
+        </receiver>
         <receiver android:name=".MaaAlarmRescheduleReceiver" android:exported="false">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED"/>

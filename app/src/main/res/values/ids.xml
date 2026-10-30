@@ -14,6 +14,8 @@
     <item name="home_messages_action" type="id" />
     <item name="home_chat_action" type="id" />
     <item name="home_apps_action" type="id" />
+    <item name="home_missed_calls_action" type="id" />
+    <item name="home_gallery_action" type="id" />
     <item name="home_help_action" type="id" />
     <item name="home_settings_action" type="id" />
     <item name="home_more_action" type="id" />

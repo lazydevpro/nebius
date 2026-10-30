@@ -11,7 +11,7 @@ import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
 import android.widget.TextView
 
-/** Experimental UI masking. Never clicks, sends messages, or stores screen text. */
+/** Experimental UI masking. Never sends messages or stores screen text. Its only clicks are [VideoCallAssist]'s. */
 class WhatsAppGuard : AccessibilityService() {
     private val masks=mutableListOf<TextView>()
     private var signature=""
@@ -22,6 +22,7 @@ class WhatsAppGuard : AccessibilityService() {
         masks.clear(); signature=""
     }
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
+        if(VideoCallAssist.isArmed()) VideoCallAssist.onWindowChanged(rootInActiveWindow,resources.displayMetrics.heightPixels)
         val prefs=getSharedPreferences("family",MODE_PRIVATE)
         if(!prefs.getBoolean("guard",false)) { clear(); return }
         // Do not inspect other applications. Window switches remove all masks.

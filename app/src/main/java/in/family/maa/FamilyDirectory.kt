@@ -72,6 +72,67 @@ object FamilyDirectory {
             it.actionable && expected.actionable && it.name == expected.name &&
                 it.canonicalNumber == expected.canonicalNumber
         } == true
+
+    /** Resolves an entity query (name, relationship alias, slot or phone number) to an actionable person. */
+    fun findMatch(context: Context, query: String?): Person? {
+        if (query.isNullOrBlank()) return null
+        val trimmed = query.trim().lowercase(Locale.ROOT)
+        val family = read(context).filter { it.actionable }
+
+        // 1. Exact match on family member name
+        family.firstOrNull { it.name.trim().lowercase(Locale.ROOT) == trimmed }?.let { return it }
+
+        // 2. Substring match
+        family.firstOrNull {
+            val nameLower = it.name.trim().lowercase(Locale.ROOT)
+            nameLower.isNotEmpty() && (nameLower.contains(trimmed) || trimmed.contains(nameLower))
+        }?.let { return it }
+
+        // 3. Spoken digit or slot number
+        val slot = when {
+            trimmed.contains("1") || trimmed.contains("one") || trimmed.contains("first") || trimmed.contains("पहला") -> 1
+            trimmed.contains("2") || trimmed.contains("two") || trimmed.contains("second") || trimmed.contains("दूसरा") -> 2
+            trimmed.contains("3") || trimmed.contains("three") || trimmed.contains("third") || trimmed.contains("तीसरा") -> 3
+            else -> null
+        }
+        if (slot != null) {
+            family.firstOrNull { it.slot == slot }?.let { return it }
+        }
+
+        // 4. Common relationship aliases
+        val aliases = listOf(
+            listOf("son", "beta", "बेटा", "लड़का"),
+            listOf("daughter", "beti", "बेटी", "लड़की"),
+            listOf("brother", "bhai", "भैया", "भाई"),
+            listOf("sister", "didi", "दीदी", "बहन"),
+            listOf("father", "papa", "dad", "पिता", "पापा"),
+            listOf("mother", "mummy", "mom", "माँ", "मम्मी", "माता"),
+            listOf("doctor", "डॉक्टर")
+        )
+        for (person in family) {
+            val nameLower = person.name.trim().lowercase(Locale.ROOT)
+            for (synonyms in aliases) {
+                if (synonyms.any { it in trimmed } && synonyms.any { it in nameLower }) {
+                    return person
+                }
+            }
+        }
+
+        // 5. If query itself is a valid phone number
+        val canonical = canonicalNumber(query)
+        if (canonical != null) {
+            return Person(
+                slot = 0,
+                name = query,
+                rawNumber = query,
+                canonicalNumber = canonical,
+                photoUri = "",
+                issue = null
+            )
+        }
+
+        return null
+    }
 }
 
 object CommunicationDrafts {

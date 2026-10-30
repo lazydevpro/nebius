@@ -67,7 +67,8 @@ class AppsActivity : Activity() {
         window.decorView.systemUiVisibility = View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR or View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL; setBackgroundColor(PlatformUi.CREAM)
-            setPadding(0, PlatformUi.dp(this@AppsActivity, 16), 0, PlatformUi.dp(this@AppsActivity, 12))
+            clipChildren = false; clipToPadding = false
+            setPadding(0, PlatformUi.dp(this@AppsActivity, 16), 0, PlatformUi.dp(this@AppsActivity, 16))
         }
         root.addView(PlatformUi.button(this, label(R.string.platform_back)) { finish() }.apply { id = R.id.platform_back }, PlatformUi.params(this, 0))
         root.addView(PlatformUi.text(this, 30f, bold = true).apply { text = label(R.string.platform_apps); if (Build.VERSION.SDK_INT >= 28) isAccessibilityHeading = true }, PlatformUi.params(this))
