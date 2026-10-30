@@ -1,176 +1,129 @@
-# Maa — a Hindi and English phone home for my mom
+# Maa — a phone my mom can talk to
 
-An Android launcher for someone who recognises family faces and uses speed dial,
-but cannot comfortably read smartphone menus. Package: `in.family.maa`.
-Android 8+; physical target: Poco F1.
+**Maa** (माँ, "mother") is an Android home screen for someone who recognises family faces and
+can use speed dial, but cannot comfortably read smartphone menus. She talks to **Asha**, an
+assistant that understands Hindi, English and Hinglish, instead of navigating apps.
 
-The current app is version **0.3.0-preview** and is not production ready. The researched
-[rebuild plan](docs/PRODUCT_PLAN.md) covers complete BIG-suite parity, dependable
-Home behavior, an original accessible interface and bounded guided-app assistance.
-See the [feature inventory](docs/research/BIG_LAUNCHER_PARITY.md) and
-[independent code audit](docs/research/INDEPENDENT_CODE_AUDIT.md) for scope and gaps.
+Asha runs on **NVIDIA Nemotron** through **Nebius Token Factory**.
 
-The rebuild adds the selected compact Home design, live device status, caregiver
-PIN, app search/favorites/hiding, family message drafts, alarms, opt-in notification
-history and an explicit assistant with a floating navigation helper. Home has no
-brand header, language selector, Help, Settings or More buttons. Its largest bottom
-action is **Ask Asha**, with a customizable name. Hold the clock card and confirm
-**Open settings** to access configuration; a configured caregiver PIN remains required.
-Secondary tools stay in Settings → Tools and supported assistant routes. These features do not establish full
-BIG-suite parity or reliable control inside WhatsApp. Original design concepts
-are in `output/ui-mockups`; actual device evidence stays local in `docs/verification`.
+Built for the [Nebius x NVIDIA Global AI Hackathon](https://nebiusglobalaihackathon.devpost.com/),
+Best Apps and Agents track.
 
-## Build on this Windows machine
+| | |
+|---|---|
+| Package | `in.family.maa`, Kotlin, Android 8+ |
+| Tested on | Poco F1, Android 10 (MIUI), over ADB |
+| Model | `nvidia/Nemotron-3.5-Super-VL` on Nebius Token Factory |
+| License | [MIT](LICENSE) |
 
-Run `./build.ps1` from PowerShell. It uses the installed Java 17 and Android SDK,
-builds the debug APK, runs Android lint, and copies the result to
-`dist/maa-debug.apk`. Android Studio is not required to be open.
-The standard Gradle wrapper is included. For other machines, install JDK 17 and
-Android SDK 36, set `local.properties`, then run `gradlew assembleDebug lintDebug`.
+## What she can do
 
-## Install on the Poco
+- **Ask Asha.** One large button. Asha understands the request and acts on it: call family,
+  open the camera or photos, read the battery, time or date, or check the next medicine. If
+  the network is down, a local fallback still handles the common requests.
+- **See family photos without opening WhatsApp.** When a photo arrives in the family WhatsApp
+  group, Asha turns yellow. One tap and she says a new photo arrived and shows it in Maa's own
+  viewer. WhatsApp's auto-download fetches the file. Messages outside the family group are ignored.
+- **Video call by voice.** "Video call Beta" opens that chat in WhatsApp and presses Call, Video
+  call and the confirmation for her, because WhatsApp has no link that starts a video call.
+- **"What medicine is this?"** She points the camera at a pack. Nemotron reads the name, what it
+  treats and the expiry date, and matches it to the medicines the family saved. Asha then says
+  when to take it, using the family's schedule, and adds nothing of her own.
+- **Stay inside Maa.** The camera (photo and video) and the photo viewer are built in, so she
+  does not land in a system app she cannot get out of.
+- **Everything else.** Medicine reminders, alarms, a caregiver PIN, app hiding, a floating help
+  button and a QR photo she can send to family. Voice and screens work in Hindi and English.
 
-Run `./install-poco.ps1` once the phone is online; it checks the model before
-installing and preserves app data. Equivalent commands:
+## How NVIDIA Nemotron and Token Factory are used
 
-```powershell
-$adb = "$env:LOCALAPPDATA\Microsoft\WinGet\Packages\Google.PlatformTools_Microsoft.Winget.Source_8wekyb3d8bbwe\platform-tools\adb.exe"
-& $adb connect 100.79.216.34:5555
-& $adb devices -l
-& $adb -s 100.79.216.34:5555 shell getprop ro.product.model
-& $adb -s 100.79.216.34:5555 install -r dist/maa-debug.apk
-& $adb -s 100.79.216.34:5555 shell am start -n in.family.maa/.MainActivity
+Maa makes runtime calls to the Token Factory inference API, and one NVIDIA open model does both jobs.
+
+| Job | Where | What Nemotron does | Measured |
+|---|---|---|---|
+| Understand a request | [`NebiusIntentDispatcher.kt`](app/src/main/java/in/family/maa/NebiusIntentDispatcher.kt) | Turns Hindi, English or Hinglish into JSON: action, person, channel and a spoken reply, using the phone's status | 0.9–1.2 s over 8 test requests |
+| Read a medicine pack | [`MedicineScanner.kt`](app/src/main/java/in/family/maa/MedicineScanner.kt) | Vision: name, strength, use, printed timing, expiry and which saved medicine it matches | 2.3 s on a clean test image |
+
+Using one model for text and vision kept the app small: one API, one prompt style and one place
+to change the model.
+
+Token Factory's OpenAI-compatible API let me compare models using Maa's real prompts in a few
+minutes. Thinking is turned off with `chat_template_kwargs: {"enable_thinking": false}`, because an
+elderly user is waiting for a spoken reply and the app needs clean JSON.
+
+```text
+Mom's voice ──> Android speech recognition ──> Asha ──> local routing for exact commands
+                                                  └───> Nemotron on Nebius Token Factory
+                                                          (directly, or through the gateway)
+Camera ──> Maa's scanner ──> Nemotron vision ──> saved family schedule ──> spoken answer
+WhatsApp notification ──> family group filter on the phone ──> Asha turns yellow
 ```
 
-Keep ADB on the existing private Tailscale network. No port forwarding.
+## Safety decisions
 
-## Configure once as a family member
+- **AI never decides a dose.** Times come only from the schedule the family saved, and an expired
+  pack is given no time at all.
+- **Text in a photo is data.** The prompt tells the model not to treat it as instructions.
+- **Fixed actions.** The model chooses from an allowlist. It cannot pay anyone or run commands.
+- **The accessibility service stays idle.** It presses WhatsApp's call buttons only for 15 seconds
+  after Mom asks for a video call, and only those buttons.
+- **What leaves the phone.** The request text, medicine photos, family contact names and phone
+  status (battery, network, time, date, next medicine). WhatsApp messages are not sent to the AI.
 
-Hold the clock, confirm Open, then enter the caregiver PIN if configured. Add up
-to three names, numbers and photos in Settings. Contacts use the
-system dialler, preserving its final call control. Choose Maa as the default Home
-app in Android settings if desired. All family buttons still work without the AI
-backend. New installs offer English/Hindi and assistant-name choices during
-onboarding, with **English** and **Asha** selected by default. Language can later be
-changed inside Settings, and the assistant name is saved with the other fields.
-Existing explicit language choices are preserved. The
-interface, spoken prompts, shared request text and floating help button use the
-selected language. Contact names and other text you enter stay as written.
-Switching preserves unfinished settings and the entered QR amount. This changes
-Maa only; Android permission screens and other apps keep their own language.
+## Run it
 
-Speech recognition uses Hindi (India) or English (India), matching the switch.
-The phone needs a recognition service and a TTS voice for that language. If the
-TTS voice is unavailable, prompts remain visible and the buttons still work.
+You need JDK 17, Android SDK 36 and a [Nebius Token Factory](https://tokenfactory.nebius.com) API key.
 
-Unfinished family settings survive activity recreation and returning from the
-photo picker. Text fields and switches take effect only after pressing Save;
-choosing a contact photo stays in the draft until Save. The help screen provides
-large buttons for choosing a family contact or opening the message share chooser.
+1. Copy `secrets.properties.example` to `secrets.properties` and fill in `NEBIUS_API_KEY`. This file
+   is git-ignored. Do not share an APK built this way, because the key can be extracted from it.
+2. Build and install:
 
-The floating help button requires “display over other apps” permission. Return to
-Maa settings after granting it and press the enable button again. It offers Home,
-family and assistant routes;
-the microphone runs only after the voice button is pressed. The service can be
-stopped from Maa settings. Some apps prevent overlays, and MIUI may need manual
-background settings. Validate those on the Poco rather than assuming them.
+   ```powershell
+   ./build.ps1
+   adb install -r dist/maa-v1.0.2.apk
+   ```
 
-Optional notification access allows quieting WhatsApp notifications whose titles
-do not exactly match the configured trusted names/group names (one per line).
-Save the list and enable the switch. This is **not spam detection** or message
-blocking. Group summaries and variations in display names can be quieted too;
-test before relying on it. This quieting feature does not retain message content.
-Separately, the Notifications screen can opt into local notification history
-(up to 100 entries for seven days). Turning history off clears it. Notification
-actions are available only while their live notification handles remain valid.
+   On another platform, set `local.properties` and run `./gradlew assembleDebug lintDebug`.
+3. Open Maa, choose the language and assistant name, then allow the microphone and camera.
+4. Optional, per feature:
+   - **Family photos:** allow Maa's notification access. In WhatsApp or WhatsApp Business, allow
+     storage and turn on auto-download. The group name must contain "family" or "परिवार", or be
+     on the trusted list in settings.
+   - **Video calls:** turn on *Maa WhatsApp screen guard* in Android's accessibility settings, and
+     save the contact in WhatsApp.
+   - **Home screen:** choose Maa as the default Home app.
 
-An experimental, separately opt-in accessibility screen guard masks UI nodes in
-WhatsApp whose exact Hindi/English labels match Updates/Communities/Channels/Status
-or whose visible text contains an HTTP link. It does not tap underlying controls
-or retain screen content. Enable the switch, save, and grant Maa's screen guard
-accessibility access. It is a prototype, not reliable protection: unsupported
-labels, embedded links, images, screen changes and UI-tree omissions can bypass
-it. Test placement and removal on the actual installed WhatsApp before enabling
-it for your mom. The masks open Maa for help when pressed. No general-purpose
-autonomous accessibility actions are implemented.
+Hold the clock on Home and confirm **Open settings** to add family contacts and medicines.
 
-## Voice and live Nemotron
+### Test build without a key
 
-Hindi and English commands route locally to family, messages, apps, alarms or Home.
-The Home Ask button explicitly starts voice input after any first-use provider
-notice and microphone permission. Its exact local navigation commands can open
-owned screens after recognition. Unknown/cloud requests remain editable and require
-submission; final call/message/payment decisions remain separately reviewed.
-Plain assistant/overlay speech retains transcript review. Forged intent extras,
-replay, cancellation and activity recreation cannot restart listening.
-Cloud classification requires separate opt-in for the configured HTTPS endpoint.
+`./build-public.ps1` builds `dist/maa-test-build.apk`, which holds no Nebius key and refuses to
+finish if it finds one. AI requests go through the gateway in [`cloudflare/`](cloudflare/README.md),
+which keeps the key on the server, owns both prompts and accepts a token that can be revoked by
+itself. A Python gateway with the same intent contract is in [`backend/`](backend).
 
-The backend uses standard-library Python. Set `NEBIUS_API_KEY`,
-`NEBIUS_MODEL` (an available NVIDIA Nemotron model ID), and `MAA_DEVICE_TOKENS`
-(a JSON map of device IDs to random tokens of at least 24 characters), then run
-`python backend/server.py`. Legacy `MAA_ACCESS_TOKEN` additionally requires
-`MAA_ALLOW_LEGACY_TOKEN=1`. See [backend limits and deployment requirements](docs/implementation/BACKEND_CONTRACT.md).
-It binds to localhost port 8080. Put it behind an authenticated HTTPS deployment
-with rate limits before connecting the phone. Enter that HTTPS base URL and the
-app-specific access token in family settings. Never enter the Nebius API key in
-the APK or commit it. `NEBIUS_BASE_URL` defaults to
-`https://api.tokenfactory.nebius.com/v1` and may be overridden for your account.
+## Tests
 
-Only submitted text, after cloud opt-in, is sent to the configured backend and then Nebius.
-The backend validates the action against a fixed allowlist, drops extra fields,
-and does not log transcripts. It cannot run arbitrary commands or pay anyone.
-The app token is stored in private app preferences; this prototype has not yet
-implemented a production credential provisioning system. No sponsor credentials
-are included and live inference has not been validated.
+```powershell
+python -m unittest discover -s backend
+adb shell am instrument -w -e class in.family.maa.NemotronLiveTest in.family.maa.test/androidx.test.runner.AndroidJUnitRunner
+```
 
-Run backend checks with `python -m unittest discover -s backend -v`.
+`NemotronLiveTest` calls Nemotron for real from the phone and needs a key. The other instrumented
+tests are in `app/src/androidTest`.
 
-## Shop QR requests
+## Known limits
 
-Capture a full-resolution photo through the system camera. The app attempts local
-QR decoding and recognises UPI pay URIs, displaying the supplied amount when
-present. A QR-provided merchant name is untrusted. Speak or type the amount;
-recognised digit strings (including Devanagari digits) are supported. Confirm the
-amount before sharing the photo and request text through Android's share chooser.
-The caregiver must verify the merchant and pay using their own payment app.
-The app never marks a chooser launch as delivery or payment completion.
-The entered amount survives activity recreation. Retaking a photo uses a separate
-capture file so cancelling the camera keeps the previous request photo intact.
+- This is a working prototype signed with a debug key, not a Play Store release.
+- Video calling depends on WhatsApp's English and Hindi button labels, so a WhatsApp update can
+  break it. Asha then opens the chat and tells Mom which buttons to press.
+- After an app update, Android can show the accessibility switch as on while the service stays
+  disconnected. Asha notices this and gives the same instructions. Turning the switch off and on
+  fixes it.
+- Automated tests do not cover real speech recognition or a real WhatsApp call. Those were checked
+  by hand on the Poco. The Hindi medicine flow has had less testing than English.
+- QR support only sends a photo and amount to family. Maa never pays anyone.
 
-## Development checks
+More detail: [product plan](docs/PRODUCT_PLAN.md), [testing checklist](docs/TESTING.md) and
+[submission text](docs/SUBMISSION.md).
 
-Run `python -m unittest discover -s backend -v` for the local gateway tests.
-Run `./test-emulator.ps1` once an Android emulator is fully booted to build, lint,
-install and run the six Android regression tests. Pass `-Serial emulator-5556`
-if needed. The script accepts emulator serials only because the QR test uses a
-temporary camera-result fixture. It writes its result to
-`docs/verification/instrumentation.txt`.
-
-The Android tests cover both language directions, persistence after recreation and
-relaunch, draft settings and QR amounts across language changes, English payment
-confirmation, help navigation, returning Home from the help intent, and rejecting
-malformed backend addresses in both languages.
-They do not verify speech recognition, camera hardware, WhatsApp, real sharing or
-live inference. Continue using the Poco acceptance checklist for those features.
-
-## Current boundaries
-
-This first APK does not yet provide a simplified WhatsApp media viewer, reliable
-complete in-app button/link protection, automated chat navigation, SMS blocking, fraud
-classification, automatic caregiver delivery, caregiver acknowledgement tracking,
-or a production hosted backend. WhatsApp opens its normal interface. These are
-remaining parts of the wider concept, not capabilities of this APK.
-
-Physical verification on Poco is required for Hindi/English speech, photos, camera/QR,
-sharing, notification access, overlays, background reliability and real WhatsApp.
-The dedicated device is the primary acceptance target. Build success alone is
-insufficient. See `docs/TESTING.md` for the task loop and acceptance checks.
-
-## Sources used for build and integration
-
-- [Android build plugin compatibility](https://developer.android.com/build/releases/about-agp)
-- [Android Java versions](https://developer.android.com/build/jdks)
-- [Android in-app language packaging](https://developer.android.com/guide/app-bundle/configure-base#handling_language_changes)
-- [Nebius inference API](https://api.tokenfactory.nebius.com/docs)
-
-Original code: MIT. ZXing core: Apache-2.0; included as a Maven dependency.
+Original code is MIT licensed. ZXing core is Apache-2.0 and included as a Maven dependency.

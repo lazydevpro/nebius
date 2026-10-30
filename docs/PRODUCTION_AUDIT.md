@@ -25,7 +25,7 @@ complete real-world acceptance test or penetration test.
 ## Release blockers
 
 1. **P1 — Spoken payment amounts are parsed incorrectly.**
-   [MainActivity.kt](C:/Users/techtorm/Documents/hackathon/nebius/app/src/main/java/in/family/maa/MainActivity.kt:338) takes the first matching digit substring.
+   [MainActivity.kt](app/src/main/java/in/family/maa/MainActivity.kt:338) takes the first matching digit substring.
    `1,000 rupees` becomes `1`; `-50 rupees` becomes `50`; `100.999 rupees` becomes
    `100.99`. The later positive-value check accepts these transformed values.
    Confirmation and family review reduce impact but do not make the parser correct.
@@ -36,7 +36,7 @@ complete real-world acceptance test or penetration test.
 
 2. **P1 — The distributed APK enables debugging and uses the Android debug key.**
    `aapt2` reports `android:debuggable=true`; `apksigner` reports
-   `C=US, O=Android, CN=Android Debug`. [build.ps1](C:/Users/techtorm/Documents/hackathon/nebius/build.ps1:8) only builds
+   `C=US, O=Android, CN=Android Debug`. [build.ps1](build.ps1:8) only builds
    and distributes `assembleDebug`. The current Gradle file has no production
    signing setup. Prepare a separately signed, non-debuggable release artifact,
    protect its signing key, and validate update/install behavior. Do not uninstall
@@ -44,9 +44,9 @@ complete real-world acceptance test or penetration test.
    the user's data and agreeing a migration approach.
 
 3. **P1 — The AI gateway is a development server without production request controls.**
-   [server.py](C:/Users/techtorm/Documents/hackathon/nebius/backend/server.py:65) reads an authenticated request body
+   [server.py](backend/server.py:65) reads an authenticated request body
    with no socket deadline; a local single-connection probe confirmed the accepted
-   socket timeout is `None`. [server.py](C:/Users/techtorm/Documents/hackathon/nebius/backend/server.py:84) starts an
+   socket timeout is `None`. [server.py](backend/server.py:84) starts an
    unbounded threaded HTTP server. There is no implemented rate limit, concurrency
    cap, per-device credential lifecycle, or inference spending limit. One shared
    bearer token is compared at line 59. Binding to localhost is appropriate for
@@ -68,20 +68,20 @@ complete real-world acceptance test or penetration test.
 ## Additional reliability issues
 
 - **P2 — Contact photos are loaded without bounded thumbnails.**
-  [MainActivity.kt](C:/Users/techtorm/Documents/hackathon/nebius/app/src/main/java/in/family/maa/MainActivity.kt:153) and line 183 pass saved image URIs directly to
+  [MainActivity.kt](app/src/main/java/in/family/maa/MainActivity.kt:153) and line 183 pass saved image URIs directly to
   `ImageView.setImageURI` while creating the launcher/contact screen. No thumbnail
   sampling, background load or image-size budget is implemented here. A large or
   slow image provider can delay the core launcher UI; memory failure is an
   unverified risk, not a reproduced crash. Use bounded thumbnails with placeholders
   and test large images and revoked photo access on the Poco.
 - **P2 — Camera-result file failures can escape the activity callback.**
-  [MainActivity.kt](C:/Users/techtorm/Documents/hackathon/nebius/app/src/main/java/in/family/maa/MainActivity.kt:230) copies and overwrites the previous QR photo
+  [MainActivity.kt](app/src/main/java/in/family/maa/MainActivity.kt:230) copies and overwrites the previous QR photo
   without handling I/O failure. Full storage or an unreadable capture can raise an
   exception, and failure after overwrite begins can damage the previous photo.
   Use a temporary replacement and error handling; test storage failure while
   preserving the current request.
 - **P2 — Floating help is not yet verified as a dependable recovery control.**
-  [HelpOverlayService.kt](C:/Users/techtorm/Documents/hackathon/nebius/app/src/main/java/in/family/maa/HelpOverlayService.kt:48)
+  [HelpOverlayService.kt](app/src/main/java/in/family/maa/HelpOverlayService.kt:48)
   returns `START_NOT_STICKY`, and no recovery/onboarding flow handles a killed
   service. The enable action announces success before the service's window-add
   outcome is known. Confirm permissions, actual visibility, service loss and MIUI
@@ -103,7 +103,7 @@ logging; restricted photo-provider paths; and invalidation of stale voice result
 
 ## Poco verification result
 
-- Connected to `100.79.216.34:5555` over Tailscale after the user enabled the
+- Connected to `<phone-tailscale-ip>:5555` over Tailscale after the user enabled the
   bridge and approved this computer's debugging key.
 - Verified `POCO F1`, Android 10, API 29, 1080x2246 at 440 dpi.
 - Maa was not installed before this check. Installed the current bilingual APK

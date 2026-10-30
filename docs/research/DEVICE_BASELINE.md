@@ -1,6 +1,6 @@
 # Verified device baseline — 3 October 2026 (UTC)
 
-- Dedicated test connection: Poco F1 at 100.79.216.34:5555 over Tailscale.
+- Dedicated test connection: Poco F1 at <phone-tailscale-ip>:5555 over Tailscale.
 - Model reported by Android: POCO F1; Android 10 / API 29; MIUI V12,
   incremental firmware build V12.0.3.0.QEJMIXM (read directly during this research).
 - Display: 1080x2246, density 440 dpi.

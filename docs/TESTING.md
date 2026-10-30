@@ -5,7 +5,7 @@
 Regression coverage includes Home viewport fit in both languages with no title/language/footer controls, the largest Ask Asha CTA below the tiles, one compact status card, large-font status layout, clock long-press confirmation and accessibility labeling, Home dismissing settings gates, English/Asha onboarding defaults and unsaved recreation, assistant-name normalization, trusted voice-token replay/spoof rejection, canonical recipient validation and stale identity, per-recipient/channel drafts, bounded money grammar, alarm timing/storage, opt-in notification retention, app search recreation and stale floating-helper stop/start events. Tests preserve pre-existing app preferences and QR fixtures. No actual call, message, payment or cloud inference was initiated.
 
 Build → install/update → launch → interact → observe screenshot/hierarchy/logs →
-fix → repeat. Prefer the Poco F1 at `100.79.216.34:5555`; verify its model first.
+fix → repeat. Prefer the Poco F1 at `<phone-tailscale-ip>:5555`; verify its model first.
 Never reset it, uninstall unrelated apps, or expose ADB publicly.
 
 1. Home: readable large targets; no overlap with real notch or navigation bars.
