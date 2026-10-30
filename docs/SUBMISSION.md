@@ -98,7 +98,7 @@ Maa is an Android app (Android 8 or later). It was tested on a Poco F1 running A
 2. Install it, allowing installs from your browser if Android asks. It is signed with a debug key.
 3. Open Maa, keep English and Asha, and allow the microphone and camera.
 4. Tap **Ask Asha** and say "what's the battery?" or "open the camera".
-5. Say "what medicine is this?", then point the camera at any medicine pack and tap **Scan**.
+5. Say "what medicine is this?", then point the camera at any medicine pack and tap **Scan Medicine**.
 
 To try the WhatsApp features, you need WhatsApp or WhatsApp Business on the phone:
 
