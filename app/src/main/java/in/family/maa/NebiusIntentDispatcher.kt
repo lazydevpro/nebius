@@ -23,7 +23,8 @@ object NebiusIntentDispatcher {
 
     const val NEBIUS_BASE_URL = "https://api.tokenfactory.nebius.com/v1"
     const val NEBIUS_API_KEY = BuildConfig.NEBIUS_API_KEY
-    const val NEBIUS_MODEL = "Qwen/Qwen3-30B-A3B-Instruct-2507"
+    // One NVIDIA open model serves both Asha's requests and medicine photos.
+    const val NEBIUS_MODEL = "nvidia/Nemotron-3.5-Super-VL"
 
     fun collectPhoneContext(context: Context): JSONObject {
         return JSONObject().apply {
@@ -51,6 +52,15 @@ object NebiusIntentDispatcher {
         val prefs = context.getSharedPreferences("maa", Context.MODE_PRIVATE)
         val configuredBackend = prefs.getString("backend", "")?.trim().orEmpty()
         val phoneContext = collectPhoneContext(context)
+
+        // A build without its own key (the public test build) reaches Nebius only through the gateway.
+        if (NEBIUS_API_KEY.isBlank()) {
+            return runCatching {
+                callGateway(AssistantActivity.DEFAULT_BACKEND, AssistantActivity.DEFAULT_TOKEN, text, candidates, phoneContext)
+            }.getOrElse {
+                fallbackLocal(context, text, phoneContext)
+            }
+        }
 
         // If custom gateway is configured (and not empty / not dead workers.dev domain)
         val useGateway = configuredBackend.isNotBlank() &&
@@ -134,7 +144,9 @@ object NebiusIntentDispatcher {
             val payload = JSONObject().apply {
                 put("model", NEBIUS_MODEL)
                 put("temperature", 0)
-                put("max_tokens", 120)
+                put("max_tokens", 200)
+                // Thinking takes Nemotron several seconds and can use up every token before the JSON.
+                put("chat_template_kwargs", JSONObject().put("enable_thinking", false))
                 val messages = JSONArray().apply {
                     put(JSONObject().apply {
                         put("role", "system")

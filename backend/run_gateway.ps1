@@ -29,7 +29,7 @@ if (-not $ApiKey) {
     $ApiKey = $env:NEBIUS_API_KEY
 }
 if (-not $Model) {
-    $Model = if ($env:NEBIUS_MODEL) { $env:NEBIUS_MODEL } else { "Qwen/Qwen3-30B-A3B-Instruct-2507" }
+    $Model = if ($env:NEBIUS_MODEL) { $env:NEBIUS_MODEL } else { "nvidia/Nemotron-3.5-Super-VL" }
 }
 if (-not $DeviceToken) {
     $DeviceToken = if ($env:MAA_DEVICE_TOKEN) { $env:MAA_DEVICE_TOKEN } else { throw 'Set MAA_DEVICE_TOKEN in backend/.env.' }

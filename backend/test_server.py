@@ -429,7 +429,8 @@ class UpstreamTests(unittest.TestCase):
         request = upstream.call_args.args[0]
         payload = json.loads(request.data)
         self.assertEqual(payload["messages"][1], {"role": "user", "content": "मदद"})
-        self.assertEqual(payload["max_tokens"], 80)
+        self.assertEqual(payload["max_tokens"], 200)
+        self.assertFalse(payload["chat_template_kwargs"]["enable_thinking"])
         self.assertEqual(upstream.call_args.kwargs["timeout"], 0.2)
         self.assertEqual(response.read_sizes, [MAX_UPSTREAM + 1])
 

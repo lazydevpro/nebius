@@ -17,7 +17,6 @@ import java.util.Calendar
  * when to take it always comes from the schedule the family saved, never from the model.
  */
 object MedicineScanner {
-    private const val VISION_MODEL = "deepseek-ai/DeepSeek-V4.1-Flash"
     private const val MIN_LONGEST_SIDE = 1600
     private const val JPEG_QUALITY = 85
 
@@ -106,7 +105,10 @@ object MedicineScanner {
     }
 
     private fun ask(jpeg: ByteArray, medicines: List<MedicineManager.MedicineItem>): String {
-        val call = URL("${NebiusIntentDispatcher.NEBIUS_BASE_URL}/chat/completions").openConnection() as HttpURLConnection
+        // A build without its own key (the public test build) reads photos through the gateway.
+        val direct = NebiusIntentDispatcher.NEBIUS_API_KEY.isNotBlank()
+        val endpoint = if (direct) "${NebiusIntentDispatcher.NEBIUS_BASE_URL}/chat/completions" else "${AssistantActivity.DEFAULT_BACKEND.trimEnd('/')}/scan"
+        val call = URL(endpoint).openConnection() as HttpURLConnection
         try {
             call.instanceFollowRedirects = false
             call.requestMethod = "POST"
@@ -114,28 +116,31 @@ object MedicineScanner {
             call.readTimeout = 40000
             call.doOutput = true
             call.setRequestProperty("Content-Type", "application/json; charset=utf-8")
-            call.setRequestProperty("Authorization", "Bearer ${NebiusIntentDispatcher.NEBIUS_API_KEY}")
+            call.setRequestProperty("Authorization", "Bearer ${if (direct) NebiusIntentDispatcher.NEBIUS_API_KEY else AssistantActivity.DEFAULT_TOKEN}")
             val saved = medicines.joinToString("; ") { "id=${it.id}: ${it.nameEn} / ${it.nameHi}" }
-            val photo = "data:image/jpeg;base64," + Base64.encodeToString(jpeg, Base64.NO_WRAP)
-            val payload = JSONObject().apply {
-                put("model", VISION_MODEL)
-                put("temperature", 0)
-                put("max_tokens", 900)
-                put("messages", JSONArray()
-                    .put(JSONObject().put("role", "system").put("content", instructions(saved)))
-                    .put(JSONObject().put("role", "user").put("content", JSONArray()
-                        .put(JSONObject().put("type", "text").put("text", "What medicine is this?"))
-                        .put(JSONObject().put("type", "image_url").put("image_url", JSONObject().put("url", photo))))))
-            }
+            val photo = Base64.encodeToString(jpeg, Base64.NO_WRAP)
+            val payload = if (direct) nebiusRequest(photo, saved) else JSONObject().put("photo", photo).put("saved", saved)
             val body = payload.toString().toByteArray(Charsets.UTF_8)
             call.setFixedLengthStreamingMode(body.size)
             call.outputStream.use { it.write(body) }
             if (call.responseCode != 200) throw RuntimeException("Nebius HTTP ${call.responseCode}")
-            return JSONObject(NebiusIntentDispatcher.readStream(call)).getJSONArray("choices")
-                .getJSONObject(0).getJSONObject("message").getString("content")
+            val reply = JSONObject(NebiusIntentDispatcher.readStream(call))
+            return if (direct) reply.getJSONArray("choices").getJSONObject(0).getJSONObject("message").getString("content") else reply.getString("reply")
         } finally {
             call.disconnect()
         }
+    }
+
+    private fun nebiusRequest(photo: String, saved: String) = JSONObject().apply {
+        put("model", NebiusIntentDispatcher.NEBIUS_MODEL)
+        put("temperature", 0)
+        put("max_tokens", 900)
+        put("chat_template_kwargs", JSONObject().put("enable_thinking", false))
+        put("messages", JSONArray()
+            .put(JSONObject().put("role", "system").put("content", instructions(saved)))
+            .put(JSONObject().put("role", "user").put("content", JSONArray()
+                .put(JSONObject().put("type", "text").put("text", "What medicine is this?"))
+                .put(JSONObject().put("type", "image_url").put("image_url", JSONObject().put("url", "data:image/jpeg;base64,$photo"))))))
     }
 
     private fun instructions(saved: String) = buildString {

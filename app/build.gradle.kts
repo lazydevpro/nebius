@@ -5,6 +5,8 @@ plugins { id("com.android.application"); id("org.jetbrains.kotlin.android") }
 val secrets = Properties().apply {
     rootProject.file("secrets.properties").takeIf { it.exists() }?.inputStream()?.use { load(it) }
 }
+// The public test build holds no Nebius key: AI goes through the gateway with its own revocable token.
+val publicBuild = providers.gradleProperty("maaPublicBuild").isPresent
 dependencies {
     implementation("com.google.zxing:core:3.5.3")
     androidTestImplementation("androidx.test:core:1.7.0")
@@ -19,8 +21,9 @@ android {
     defaultConfig {
         applicationId = "in.family.maa"; minSdk = 26; targetSdk = 35; versionCode = 12; versionName = "1.0.2"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        buildConfigField("String", "NEBIUS_API_KEY", "\"${secrets.getProperty("NEBIUS_API_KEY", "")}\"")
-        buildConfigField("String", "MAA_DEVICE_TOKEN", "\"${secrets.getProperty("MAA_DEVICE_TOKEN", "")}\"")
+        buildConfigField("String", "NEBIUS_API_KEY", "\"${if (publicBuild) "" else secrets.getProperty("NEBIUS_API_KEY", "")}\"")
+        buildConfigField("String", "MAA_DEVICE_TOKEN", "\"${secrets.getProperty(if (publicBuild) "MAA_PUBLIC_TOKEN" else "MAA_DEVICE_TOKEN", "")}\"")
+        buildConfigField("String", "MAA_GATEWAY_URL", "\"${secrets.getProperty("MAA_GATEWAY_URL", "https://maa-intent-gateway.five-magazine.workers.dev")}\"")
     }
     buildFeatures { buildConfig = true }
     compileOptions { sourceCompatibility = JavaVersion.VERSION_17; targetCompatibility = JavaVersion.VERSION_17 }

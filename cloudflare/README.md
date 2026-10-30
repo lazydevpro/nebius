@@ -25,7 +25,7 @@ A Cloudflare Worker gives you a free, highly available, global HTTPS endpoint wi
 5. Go to **Settings** → **Variables and Secrets**:
    - Add Secret: `NEBIUS_API_KEY` = *your Nebius Token Factory API key*
    - Add Secret: `MAA_DEVICE_TOKEN` = `your-device-token` *(or your custom token)*
-   - Add Variable (optional): `NEBIUS_MODEL` = `Qwen/Qwen3-30B-A3B-Instruct-2507`
+   - Add Variable (optional): `NEBIUS_MODEL` = `nvidia/Nemotron-3.5-Super-VL`
 6. Copy your Worker URL:
    ```
    https://maa-assistant.<your-subdomain>.workers.dev
@@ -83,7 +83,7 @@ curl https://your-worker.workers.dev/health
 ```
 Output:
 ```json
-{"status":"ok","service":"maa-intent-gateway","model":"Qwen/Qwen3-30B-A3B-Instruct-2507","ready":true}
+{"status":"ok","service":"maa-intent-gateway","model":"nvidia/Nemotron-3.5-Super-VL","ready":true}
 ```
 
 Test the `/intent` endpoint:

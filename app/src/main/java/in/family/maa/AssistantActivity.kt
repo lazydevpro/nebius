@@ -1166,7 +1166,7 @@ class AssistantActivity : Activity(), TextToSpeech.OnInitListener {
     }
 
     companion object {
-        const val DEFAULT_BACKEND = "https://maa-intent-gateway.five-magazine.workers.dev"
+        const val DEFAULT_BACKEND = BuildConfig.MAA_GATEWAY_URL
         const val DEFAULT_TOKEN = BuildConfig.MAA_DEVICE_TOKEN
         const val EXTRA_READ_UPDATE = "in.family.maa.READ_UPDATE"
         private const val VOICE_TOKEN = "in.family.maa.TRUSTED_VOICE_ENTRY"
