@@ -1,9 +1,7 @@
 package `in`.family.maa
 
-import android.content.Context
 import android.graphics.Rect
 import android.os.SystemClock
-import android.provider.Settings
 import android.view.accessibility.AccessibilityNodeInfo
 
 /**
@@ -23,10 +21,11 @@ object VideoCallAssist {
     @Volatile private var armedUntil = 0L
     private var step = Step.CALL_BUTTON
 
-    /** True when Maa's accessibility service is switched on in Android settings. */
-    fun ready(context: Context): Boolean =
-        Settings.Secure.getString(context.contentResolver, Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES)
-            .orEmpty().contains("${context.packageName}/")
+    /**
+     * Whether Maa's accessibility service is really running. The switch in Android settings is not
+     * enough: an app update can leave it on while the service never reconnects.
+     */
+    @Volatile var ready = false
 
     fun arm() {
         step = Step.CALL_BUTTON

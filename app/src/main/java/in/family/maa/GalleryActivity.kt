@@ -156,10 +156,12 @@ class GalleryActivity : CommunicationUiActivity() {
 
     private fun queryArrivedPhotos(): List<Uri> {
         val buckets = WHATSAPP_BUCKETS.joinToString(",") { "?" }
-        val since = newPhotosSince / 1000 - ARRIVAL_MARGIN_SECONDS
+        val since = (newPhotosSince / 1000 - ARRIVAL_MARGIN_SECONDS).toString()
+        // A photo the phone already has reuses its old file, so only its modified time changes.
         return queryDevicePhotos(
-            "${MediaStore.Images.Media.DATE_ADDED} >= ? AND ${MediaStore.Images.Media.BUCKET_DISPLAY_NAME} IN ($buckets)",
-            arrayOf(since.toString()) + WHATSAPP_BUCKETS
+            "(${MediaStore.Images.Media.DATE_ADDED} >= ? OR ${MediaStore.Images.Media.DATE_MODIFIED} >= ?) " +
+                "AND ${MediaStore.Images.Media.BUCKET_DISPLAY_NAME} IN ($buckets)",
+            arrayOf(since, since) + WHATSAPP_BUCKETS
         )
     }
 

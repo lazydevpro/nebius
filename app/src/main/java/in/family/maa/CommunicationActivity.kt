@@ -148,7 +148,7 @@ object CommunicationIntents {
             return VideoCall(it, strings.getString(R.string.assistant_video_calling, person.name))
         }
         val chat = whatsAppChat(context, number) ?: return null
-        if (VideoCallAssist.ready(context)) {
+        if (VideoCallAssist.ready) {
             VideoCallAssist.arm()
             return VideoCall(chat, strings.getString(R.string.assistant_video_calling, person.name))
         }

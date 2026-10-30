@@ -21,6 +21,7 @@ class WhatsAppGuard : AccessibilityService() {
         masks.forEach { try { windows.removeView(it) } catch(_:Exception) {} }
         masks.clear(); signature=""
     }
+    override fun onServiceConnected() { VideoCallAssist.ready=true }
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
         if(VideoCallAssist.isArmed()) VideoCallAssist.onWindowChanged(rootInActiveWindow,resources.displayMetrics.heightPixels)
         val prefs=getSharedPreferences("family",MODE_PRIVATE)
@@ -57,6 +58,6 @@ class WhatsAppGuard : AccessibilityService() {
         }
     }
     override fun onInterrupt() { clear() }
-    override fun onUnbind(intent: Intent?): Boolean { clear(); return super.onUnbind(intent) }
-    override fun onDestroy() { clear(); super.onDestroy() }
+    override fun onUnbind(intent: Intent?): Boolean { VideoCallAssist.ready=false; clear(); return super.onUnbind(intent) }
+    override fun onDestroy() { VideoCallAssist.ready=false; clear(); super.onDestroy() }
 }
