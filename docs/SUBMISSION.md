@@ -1,8 +1,7 @@
 # Devpost submission text
 
 Copy each section into the matching field on the
-[hackathon site](https://nebiusglobalaihackathon.devpost.com/). Replace `[[YOUTUBE_LINK]]` and
-`[[TEST_BUILD_LINK]]` before submitting.
+[hackathon site](https://nebiusglobalaihackathon.devpost.com/). Replace `[[YOUTUBE_LINK]]` before submitting.
 
 ## Project name
 
@@ -20,7 +19,7 @@ Best Apps and Agents
 
 - Code: https://github.com/lazydevpro/nebius
 - Demo video: [[YOUTUBE_LINK]]
-- Test build: [[TEST_BUILD_LINK]]
+- Test build: https://github.com/lazydevpro/nebius/releases/tag/test-build
 
 ## Built with
 
@@ -95,7 +94,7 @@ Maa was created during the Submission Period. The oldest commit is dated 4 Octob
 
 Maa is an Android app (Android 8 or later). It was tested on a Poco F1 running Android 10.
 
-1. Download the test build: [[TEST_BUILD_LINK]]
+1. Download the test build: https://github.com/lazydevpro/nebius/releases/tag/test-build
 2. Install it, allowing installs from your browser if Android asks. It is signed with a debug key.
 3. Open Maa, keep English and Asha, and allow the microphone and camera.
 4. Tap **Ask Asha** and say "what's the battery?" or "open the camera".

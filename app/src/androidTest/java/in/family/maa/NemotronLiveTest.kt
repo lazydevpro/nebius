@@ -13,11 +13,11 @@ import org.junit.Before
 import org.junit.Test
 import java.io.ByteArrayOutputStream
 
-/** Calls Nemotron on Token Factory for real, so it needs a network and a key in secrets.properties. */
+/** Calls Nemotron on Token Factory for real: directly with a key, or through the gateway in a public build. */
 class NemotronLiveTest {
     private val context get() = InstrumentationRegistry.getInstrumentation().targetContext
 
-    @Before fun needsKey() = assumeTrue(NebiusIntentDispatcher.NEBIUS_API_KEY.isNotBlank())
+    @Before fun needsAccess() = assumeTrue(NebiusIntentDispatcher.NEBIUS_API_KEY.isNotBlank() || AssistantActivity.DEFAULT_TOKEN.isNotBlank())
 
     @Test fun understandsAHinglishRequest() {
         val result = NebiusIntentDispatcher.infer(context, "beta ko whatsapp pe call karo", listOf("Beta"))

@@ -23,7 +23,8 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         buildConfigField("String", "NEBIUS_API_KEY", "\"${if (publicBuild) "" else secrets.getProperty("NEBIUS_API_KEY", "")}\"")
         buildConfigField("String", "MAA_DEVICE_TOKEN", "\"${secrets.getProperty(if (publicBuild) "MAA_PUBLIC_TOKEN" else "MAA_DEVICE_TOKEN", "")}\"")
-        buildConfigField("String", "MAA_GATEWAY_URL", "\"${secrets.getProperty("MAA_GATEWAY_URL", "https://maa-intent-gateway.five-magazine.workers.dev")}\"")
+        // Keyed builds call Nebius directly. Changing their default would stop matching the endpoint saved on existing installs.
+        buildConfigField("String", "MAA_GATEWAY_URL", "\"${if (publicBuild) secrets.getProperty("MAA_GATEWAY_URL", "") else "https://maa-intent-gateway.five-magazine.workers.dev"}\"")
     }
     buildFeatures { buildConfig = true }
     compileOptions { sourceCompatibility = JavaVersion.VERSION_17; targetCompatibility = JavaVersion.VERSION_17 }

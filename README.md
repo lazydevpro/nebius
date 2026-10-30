@@ -96,8 +96,11 @@ Hold the clock on Home and confirm **Open settings** to add family contacts and 
 
 ### Test build without a key
 
-`./build-public.ps1` builds `dist/maa-test-build.apk`, which holds no Nebius key and refuses to
-finish if it finds one. AI requests go through the gateway in [`cloudflare/`](cloudflare/README.md),
+**[Download the test build](https://github.com/lazydevpro/nebius/releases/tag/test-build)** to try
+Maa without an API key. It was tested on a Poco F1 and is signed with a debug key.
+
+`./build-public.ps1` builds this APK, which holds no Nebius key and refuses to finish if it finds
+one. AI requests go through the gateway in [`cloudflare/`](cloudflare/README.md),
 which keeps the key on the server, owns both prompts and accepts a token that can be revoked by
 itself. A Python gateway with the same intent contract is in [`backend/`](backend).
 
